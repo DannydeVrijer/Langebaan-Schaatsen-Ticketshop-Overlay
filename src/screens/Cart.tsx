@@ -90,7 +90,7 @@ export default function Cart() {
         <p className="no-extra">Geen extra kosten bij het betalen.</p>
       </section>
 
-      <ul className="usp-bar col" aria-label="Zekerheden">
+      <ul className="usp-quiet" aria-label="Zekerheden">
         {[...usps.slice(0, 2), 'Geen account nodig'].map((u) => <li key={u}><Icon name="check" size={14} /> {u}</li>)}
       </ul>
 

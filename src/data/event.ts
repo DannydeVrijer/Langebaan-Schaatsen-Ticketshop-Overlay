@@ -41,13 +41,13 @@ export const days: Day[] = [
     teaser: 'Slotdag met 8 onderdelen, van de 10 km tot de massastart.' },
 ];
 
-export const zoneInfo: Record<Zone, { title: string; place: string; group: Group; pitch: string; vakken?: string; tip?: string }> = {
-  noord: { title: 'Ireen Wüst bocht', place: 'Staanplaats Noord', group: 'staan', pitch: 'Staan in de bocht, dicht op de schaatsers. Hier is het feest het luidst.', tip: 'Onze tip voor sfeer' },
-  zuid: { title: 'Sven Kramer bocht', place: 'Staanplaats Zuid', group: 'staan', pitch: 'Staan in de bocht waar de schaatsers met topsnelheid langs komen.' },
-  west: { title: 'Tribune West', place: 'Zitplaats West', group: 'zitten', pitch: 'Vaste zitplaats aan het rechte eind, met overzicht over de hele baan.', vakken: 'Vak K – N' },
-  oost: { title: 'Tribune Oost', place: 'Zitplaats Oost', group: 'zitten', pitch: 'Zitplaats aan de finishzijde. Je ziet elke eindsprint recht voor je.', vakken: 'Vak A – E', tip: 'Onze tip: finish recht voor je' },
-  vip: { title: 'VIP-arrangement', place: '2e etage · Zitplaats Oost', group: 'beleven', pitch: 'Ontvangst, lounge met zicht op de baan, catering en een zitplaats aan de finish.' },
-  mv: { title: 'Mindervaliden tribune', place: 'Bij de Sven Kramer bocht', group: 'toegankelijk', pitch: 'Een toegankelijke plek met goed zicht op de baan.' },
+export const zoneInfo: Record<Zone, { title: string; place: string; group: Group; pitch: string; vakken?: string; tip?: string; short: string }> = {
+  noord: { title: 'Ireen Wüst bocht', short: 'Staan in de bocht, waar het feest is', place: 'Staanplaats Noord', group: 'staan', pitch: 'Staan in de bocht, dicht op de schaatsers. Hier is het feest het luidst.', tip: 'Onze tip voor sfeer' },
+  zuid: { title: 'Sven Kramer bocht', short: 'Staan in de bocht, op topsnelheid', place: 'Staanplaats Zuid', group: 'staan', pitch: 'Staan in de bocht waar de schaatsers met topsnelheid langs komen.' },
+  west: { title: 'Tribune West', short: 'Zitplaats met overzicht over de baan', place: 'Zitplaats West', group: 'zitten', pitch: 'Vaste zitplaats aan het rechte eind, met overzicht over de hele baan.', vakken: 'Vak K – N' },
+  oost: { title: 'Tribune Oost', short: 'Zitplaats aan de finishzijde', place: 'Zitplaats Oost', group: 'zitten', pitch: 'Zitplaats aan de finishzijde. Je ziet elke eindsprint recht voor je.', vakken: 'Vak A – E', tip: 'Onze tip: finish recht voor je' },
+  vip: { title: 'VIP-arrangement', short: 'Lounge, catering en zitplaats Oost', place: '2e etage · Zitplaats Oost', group: 'beleven', pitch: 'Ontvangst, lounge met zicht op de baan, catering en een zitplaats aan de finish.' },
+  mv: { title: 'Mindervaliden tribune', short: 'Toegankelijke plek met goed zicht', place: 'Bij de Sven Kramer bocht', group: 'toegankelijk', pitch: 'Een toegankelijke plek met goed zicht op de baan.' },
 };
 
 export const groups: { key: Group; label: string; hint: string }[] = [

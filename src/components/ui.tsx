@@ -144,8 +144,9 @@ export function ActionBar({ children, note }: { children: ReactNode; note?: Reac
 /** "Waarom zo?" – toelichting per scherm voor collega's en stakeholders. */
 export function WhyButton({ k }: { k: string }) {
   const [open, setOpen] = useState(false);
+  const { demo } = useShop();
   const w = why[k];
-  if (!w) return null;
+  if (!w || !demo) return null;
   return (
     <>
       <button type="button" className="why-btn" onClick={() => setOpen(true)} aria-label="Waarom is dit scherm zo ontworpen?">
@@ -165,5 +166,19 @@ export function WhyButton({ k }: { k: string }) {
         </Sheet>
       )}
     </>
+  );
+}
+
+/** Voettekst met schakelaar voor de demomodus (ontwerpkeuzes tonen). */
+export function ProtoFooter({ text = 'Fictief voorbeeld. Er wordt niets verkocht of betaald.' }: { text?: string }) {
+  const { demo, setDemo } = useShop();
+  return (
+    <footer className="proto">
+      <span>{text}</span>
+      <label className="demo-toggle">
+        <input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} />
+        <span>Ontwerpkeuzes tonen (demo)</span>
+      </label>
+    </footer>
   );
 }

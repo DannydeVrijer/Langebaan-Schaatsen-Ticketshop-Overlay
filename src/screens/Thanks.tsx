@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { audienceLabel, days, dayOf, euro, event, zoneInfo } from '../data/event';
-import { Chevrons, Icon, ShopBar, TrackRing } from '../components/ui';
+import { Chevrons, Icon, ProtoFooter, ShopBar, TrackRing } from '../components/ui';
 import { useShop } from '../state';
 
 const APP_URL = 'https://dannydevrijer.github.io/Langebaan-Schaats-App/';
@@ -86,7 +86,7 @@ export default function Thanks() {
         <p className="note"><Icon name="info" size={15} /> {event.doorsNote}</p>
       </section>
 
-      <p className="proto">Fictief voorbeeld. Er is niets besteld of betaald.</p>
+      <ProtoFooter text="Fictief voorbeeld. Er is niets besteld of betaald." />
       <Link to="/" className="btn btn-secondary" style={{ marginTop: 8 }}>Terug naar het begin</Link>
     </main>
   );

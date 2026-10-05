@@ -65,3 +65,11 @@ bol.com blokkeert automatische bezoekers; dit is gebaseerd op analyses van hun a
 | Navigatie weg in checkout | Alleen terug naar je mandje |
 
 Niet overgenomen: sterren/reviews en "bestseller"-labels (geen echte data), kortingscodes en exit-intent-kortingen.
+
+## v2.2 – rustiger
+
+Feedback: te druk. Aangepast:
+- Startpagina van ~9 lagen naar 4 vóór het eerste ticket: titel + datum, dagkeuze (één schakelbalk met prijs), één regel uitleg, de vakkenlijst.
+- Vakken als compacte rijen (plattegrondje, naam, één regel, vanaf-prijs); tik om aantallen te kiezen.
+- Weg: filterknoppen, stappenbalk op de start, labels, quote per kaart, "incl. servicekosten" per regel, kaders om alles.
+- "Waarom?"-knoppen alleen in demomodus (schakelaar onderaan de pagina).
