@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_BASE: /schaats-ticketshop/
+          VITE_BASE: /Langebaan-Schaatsen-Ticketshop-Overlay/
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
   deploy:

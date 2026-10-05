@@ -28,7 +28,7 @@ npm run dev        # http://localhost:5173
 npm run build      # productie-build in dist/
 ```
 
-Online via GitHub Pages: `https://dannydevrijer.github.io/schaats-ticketshop/` (eenmalig: *Settings → Pages → Source: GitHub Actions*).
+Online via GitHub Pages: `https://dannydevrijer.github.io/Langebaan-Schaatsen-Ticketshop-Overlay/` (eenmalig: *Settings → Pages → Source: GitHub Actions*).
 
 ## Naar een echte koppeling
 
