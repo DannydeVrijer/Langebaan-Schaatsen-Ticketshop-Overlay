@@ -1,7 +1,6 @@
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { ShopProvider } from './state';
-import Home from './screens/Home';
 import Day from './screens/Day';
 import Parking from './screens/Parking';
 import Cart from './screens/Cart';
@@ -22,14 +21,14 @@ export default function App() {
         <ScrollTop />
         <div className="app">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Day />} />
             <Route path="/tickets/:day" element={<Day />} />
             <Route path="/parkeren" element={<Parking />} />
             <Route path="/winkelmand" element={<Cart />} />
             <Route path="/gegevens" element={<Checkout />} />
             <Route path="/betalen" element={<Pay />} />
             <Route path="/bedankt" element={<Thanks />} />
-            <Route path="*" element={<Home />} />
+            <Route path="*" element={<Day />} />
           </Routes>
         </div>
       </ShopProvider>

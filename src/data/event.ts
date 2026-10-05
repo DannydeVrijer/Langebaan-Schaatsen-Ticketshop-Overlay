@@ -41,11 +41,11 @@ export const days: Day[] = [
     teaser: 'Slotdag met 8 onderdelen, van de 10 km tot de massastart.' },
 ];
 
-export const zoneInfo: Record<Zone, { title: string; place: string; group: Group; pitch: string; vakken?: string }> = {
-  noord: { title: 'Ireen Wüst bocht', place: 'Staanplaats Noord', group: 'staan', pitch: 'Staan in de bocht, dicht op de schaatsers. Hier is het feest het luidst.' },
+export const zoneInfo: Record<Zone, { title: string; place: string; group: Group; pitch: string; vakken?: string; tip?: string }> = {
+  noord: { title: 'Ireen Wüst bocht', place: 'Staanplaats Noord', group: 'staan', pitch: 'Staan in de bocht, dicht op de schaatsers. Hier is het feest het luidst.', tip: 'Onze tip voor sfeer' },
   zuid: { title: 'Sven Kramer bocht', place: 'Staanplaats Zuid', group: 'staan', pitch: 'Staan in de bocht waar de schaatsers met topsnelheid langs komen.' },
   west: { title: 'Tribune West', place: 'Zitplaats West', group: 'zitten', pitch: 'Vaste zitplaats aan het rechte eind, met overzicht over de hele baan.', vakken: 'Vak K – N' },
-  oost: { title: 'Tribune Oost', place: 'Zitplaats Oost', group: 'zitten', pitch: 'Zitplaats aan de finishzijde. Je ziet elke eindsprint recht voor je.', vakken: 'Vak A – E' },
+  oost: { title: 'Tribune Oost', place: 'Zitplaats Oost', group: 'zitten', pitch: 'Zitplaats aan de finishzijde. Je ziet elke eindsprint recht voor je.', vakken: 'Vak A – E', tip: 'Onze tip: finish recht voor je' },
   vip: { title: 'VIP-arrangement', place: '2e etage · Zitplaats Oost', group: 'beleven', pitch: 'Ontvangst, lounge met zicht op de baan, catering en een zitplaats aan de finish.' },
   mv: { title: 'Mindervaliden tribune', place: 'Bij de Sven Kramer bocht', group: 'toegankelijk', pitch: 'Een toegankelijke plek met goed zicht op de baan.' },
 };
@@ -131,3 +131,22 @@ export const euro = (n: number) => n.toLocaleString('nl-NL', { style: 'currency'
 export const dayOf = (k: DayKey) => days.find((d) => d.key === k);
 export const productTitle = (p: Product) => zoneInfo[p.zone].title;
 export const dayLabel = (k: DayKey) => (k === 'pp' ? 'Passe-partout · alle 3 dagen' : dayOf(k)!.long);
+
+/* ---------- winkel-USP's (bol.com: belofte herhalen door de hele flow) ---------- */
+export const usps = ['E-ticket direct in je mail', 'Veilig betalen met iDEAL', 'Kinderen t/m 5 jaar gratis'];
+
+/* ---------- veelgestelde vragen op het moment van twijfel ---------- */
+export const faq = [
+  { q: 'Wanneer krijg ik mijn tickets?', a: 'Direct na betalen als e-ticket in je mail. Toon ze op je telefoon bij de ingang.' },
+  { q: 'Kan ik mijn ticket doorverkopen of overdragen?', a: '[beleid doorverkoop/overdracht aanleveren]' },
+  { q: 'Moet mijn kind een ticket hebben?', a: 'Kinderen t/m 5 jaar hebben gratis toegang. Van 6 t/m 12 jaar koop je een kindticket, vanaf 13 jaar een regulier ticket.' },
+  { q: 'Hoe laat moet ik er zijn?', a: 'Thialf is 1,5 uur voor de eerste start open. Kom op tijd, zeker op zaterdag en zondag.' },
+  { q: 'Wat als ik niet kan komen?', a: 'Met annuleringsbescherming (+€ 2,00 bij afrekenen) krijg je tot 100% terug bij o.a. ziekte of OV-vertraging. Voorwaarden van XCover.' },
+];
+
+/** Wat de losse dagen samen kosten t.o.v. de passe-partout (echte rekensom). */
+export const ppCompare = (zone: Zone, audience: Audience) => {
+  const pp = products.find((p) => p.day === 'pp' && p.zone === zone && p.audience === audience);
+  const los = products.filter((p) => p.day !== 'pp' && p.zone === zone && p.audience === audience).reduce((s, p) => s + p.price, 0);
+  return pp && los > pp.price ? { pp: pp.price, los, save: Math.round((los - pp.price) * 100) / 100 } : null;
+};

@@ -41,8 +41,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   // Echte reservering: start bij het eerste item, stopt als het mandje leeg is. Reset nooit vanzelf.
   useEffect(() => {
     if (empty) { setStartedAt(null); return; }
-    setStartedAt((s) => s ?? Date.now());
-    setNow(Date.now());
+    const t = Date.now();
+    setStartedAt((s) => s ?? t);
+    setNow(t);
   }, [empty]);
 
   useEffect(() => {

@@ -8,12 +8,11 @@ Klikbaar prototype van een **eigen ticketshop** voor de langebaantoernooien in T
 
 Fictief voorbeeld dat **dezelfde stappen volgt als de huidige Paylogic-shop**, maar mobile first en in de nieuwe huisstijl:
 
-1. **Start** – programma per dag als tekst, "vanaf"-prijzen, passe-partout, plattegrond Thialf (West K–N, Oost A–E, Sven Kramer- en Ireen Wüst bocht, mindervaliden).
-2. **Tickets** – dagtabbladen, klikbare plattegrond, groepen Staan · Zitten · Beleven · Toegankelijk, + en − tellen direct mee.
-3. **Parkeren** – alleen voor de dagen in je mandje.
-4. **Mandje** – 20 minuten reservering met herstel na verlopen.
-5. **Gegevens** – dezelfde velden als nu, gegroepeerd en met uitleg; bescherming en opt-ins los en uit.
-6. **Betalen (simulatie)** → **Bedankt** met agenda, delen en één vervolgaanbod.
+1. **Tickets (startpagina)** – zoals een productpagina op bol.com: direct dagtabbladen met vanaf-prijs en de tickets, gegroepeerd in Staan · Zitten · Beleven · Toegankelijk. Programma, plattegrond en vragen achter een knop. Na de eerste + een toegevoegd-melding met 'handig erbij' (kindticket, parkeren, passe-partout).
+2. **Parkeren** – alleen voor de dagen in je mandje.
+3. **Mandje** – 20 minuten reservering met herstel na verlopen.
+4. **Gegevens** – dezelfde velden als nu, gegroepeerd en met uitleg; postcode + huisnummer vult je adres; bescherming en opt-ins los en uit.
+5. **Betalen (simulatie)** → **Bedankt** met agenda, delen en één vervolgaanbod.
 
 Op elk scherm legt de knop **Waarom?** uit wat er anders is dan nu en welke marketingtechniek erachter zit. Zie ook **[VERBETERPUNTEN.md](VERBETERPUNTEN.md)**.
 

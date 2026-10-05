@@ -7,11 +7,11 @@ import { useShop } from '../state';
 type F = {
   first: string; last: string; email: string; phone: string;
   dd: string; mm: string; yyyy: string; gender: string;
-  country: string; zip: string; street: string; city: string;
+  country: string; zip: string; nr: string; street: string; city: string;
   pay: string; protect: '' | 'ja' | 'nee';
   optHos: boolean; optWa: boolean; optKnsb: boolean;
 };
-const init: F = { first: '', last: '', email: '', phone: '', dd: '', mm: '', yyyy: '', gender: '', country: 'NL', zip: '', street: '', city: '', pay: '', protect: '', optHos: false, optWa: false, optKnsb: false };
+const init: F = { first: '', last: '', email: '', phone: '', dd: '', mm: '', yyyy: '', gender: '', country: 'NL', zip: '', nr: '', street: '', city: '', pay: '', protect: '', optHos: false, optWa: false, optKnsb: false };
 const PROTECT = 2;
 
 export default function Checkout() {
@@ -20,6 +20,7 @@ export default function Checkout() {
   const [f, setF] = useState<F>(init);
   const [tried, setTried] = useState(false);
   const [openSum, setOpenSum] = useState(false);
+  const [manual, setManual] = useState(false);
 
   if (!shop.count) return <Navigate to="/winkelmand" replace />;
 
@@ -33,15 +34,21 @@ export default function Checkout() {
     return dt.getDate() === d && dt.getMonth() === m - 1 && y > 1900 && dt < new Date();
   })();
 
+  // bol.com-patroon: in NL alleen postcode + huisnummer, adres wordt opgezocht (hier gesimuleerd)
+  const zipOk = /^\d{4}\s?[A-Z]{2}$/.test(f.zip.trim());
+  const nlAuto = f.country === 'NL' && !manual;
+  const found = nlAuto && zipOk && f.nr.trim();
+
   const err: Partial<Record<keyof F, string>> = {
     first: f.first.trim() ? '' : 'Vul je voornaam in.',
     last: f.last.trim() ? '' : 'Vul je achternaam in.',
     email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email) ? '' : 'Vul een geldig e-mailadres in, bijv. naam@voorbeeld.nl.',
     dd: birthOk ? '' : 'Vul een geldige geboortedatum in (dag, maand, jaar).',
     gender: f.gender ? '' : 'Kies een optie.',
-    zip: f.zip.trim() ? '' : 'Vul je postcode in.',
-    street: f.street.trim() ? '' : 'Vul je straat en huisnummer in.',
-    city: f.city.trim() ? '' : 'Vul je woonplaats in.',
+    zip: (nlAuto ? zipOk : f.zip.trim()) ? '' : 'Vul je postcode in, bijv. 8443 DZ.',
+    nr: f.nr.trim() ? '' : 'Vul je huisnummer in.',
+    street: nlAuto || f.street.trim() ? '' : 'Vul je straatnaam in.',
+    city: nlAuto || f.city.trim() ? '' : 'Vul je woonplaats in.',
     pay: f.pay ? '' : 'Kies hoe je wilt betalen.',
     protect: f.protect ? '' : 'Kies of je annuleringsbescherming wilt.',
   };
@@ -137,10 +144,22 @@ export default function Checkout() {
             </select>
           </label>
           <div className="grid-2 zip">
-            <label>Postcode<input id="f-zip" autoComplete="postal-code" value={f.zip} onChange={(e) => set('zip', e.target.value.toUpperCase())} {...inv('zip')} />{show('zip')}</label>
-            <label>Woonplaats<input id="f-city" autoComplete="address-level2" value={f.city} onChange={(e) => set('city', e.target.value)} {...inv('city')} />{show('city')}</label>
+            <label>Postcode<input id="f-zip" autoComplete="postal-code" value={f.zip} placeholder={f.country === 'NL' ? '1234 AB' : ''} onChange={(e) => set('zip', e.target.value.toUpperCase())} {...inv('zip')} />{show('zip')}</label>
+            <label>Huisnummer<input id="f-nr" inputMode={nlAuto ? 'numeric' : 'text'} autoComplete="address-line2" value={f.nr} onChange={(e) => set('nr', e.target.value)} {...inv('nr')} />{show('nr')}</label>
           </div>
-          <label>Straat en huisnummer<input id="f-street" autoComplete="street-address" value={f.street} onChange={(e) => set('street', e.target.value)} {...inv('street')} />{show('street')}</label>
+          {nlAuto ? (
+            <p className={`addr ${found ? 'ok' : ''}`}>
+              {found
+                ? <><Icon name="pin" size={16} /><span><b>[Straatnaam] {f.nr}, [Plaats]</b><small>Automatisch gevonden via je postcode (in dit voorbeeld gesimuleerd).</small></span></>
+                : <><Icon name="info" size={16} /><span>Vul postcode en huisnummer in, dan zoeken we je adres op.</span></>}
+              <button type="button" className="inline-link" onClick={() => setManual(true)}>Zelf invullen</button>
+            </p>
+          ) : (
+            <>
+              <label>Straatnaam<input id="f-street" autoComplete="address-line1" value={f.street} onChange={(e) => set('street', e.target.value)} {...inv('street')} />{show('street')}</label>
+              <label>Woonplaats<input id="f-city" autoComplete="address-level2" value={f.city} onChange={(e) => set('city', e.target.value)} {...inv('city')} />{show('city')}</label>
+            </>
+          )}
         </fieldset>
 
         <fieldset>
@@ -148,7 +167,7 @@ export default function Checkout() {
           <div className="pay-grid" role="radiogroup" aria-label="Betaalmethode" id="f-pay" tabIndex={-1}>
             {paymentMethods.map((p) => (
               <button key={p.id} type="button" role="radio" aria-checked={f.pay === p.id} className={`pay ${f.pay === p.id ? 'on' : ''}`} onClick={() => set('pay', p.id)}>
-                <span className="radio" aria-hidden />{p.name}
+                <span className="radio" aria-hidden />{p.name}{p.id === 'ideal' && <small className="pm-tag">Meest gebruikt in NL</small>}
               </button>
             ))}
           </div>

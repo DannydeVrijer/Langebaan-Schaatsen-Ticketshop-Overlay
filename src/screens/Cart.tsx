@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { audienceLabel, dayLabel, dayOf, euro, zoneInfo, type DayKey } from '../data/event';
+import { audienceLabel, dayLabel, dayOf, euro, faq, ppCompare, usps, zoneInfo, type DayKey } from '../data/event';
 import { ActionBar, Icon, ShopBar, StepBar, Stepper } from '../components/ui';
 import { mmss, useShop, type Line } from '../state';
 
@@ -40,6 +40,7 @@ export default function Cart() {
 
   const byDay = (k: DayKey) => shop.lines.filter((l) => (l.kind === 'ticket' ? l.item.day === k : l.item.day === k));
   const low = (shop.remaining ?? 0) < 5 * 60_000;
+  const saved = shop.lines.reduce((s, l) => s + (l.kind === 'ticket' && l.item.day === 'pp' ? (ppCompare(l.item.zone, l.item.audience)?.save ?? 0) * l.qty : 0), 0);
 
   const title = (l: Line) => (l.kind === 'ticket' ? zoneInfo[l.item.zone].title : `Parkeren ${l.item.lot}`);
   const sub = (l: Line) => (l.kind === 'ticket' ? audienceLabel[l.item.audience] : 'Per auto');
@@ -82,15 +83,24 @@ export default function Cart() {
       ))}
 
       <section className="totals-card">
-        <div><span>Tickets en parkeren</span><span>{euro(shop.total)}</span></div>
+        <div><span>{shop.lines.some((l) => l.kind === 'parking') ? 'Tickets en parkeren' : 'Tickets'}</span><span>{euro(shop.total)}</span></div>
         <div className="sub"><span>Waarvan servicekosten</span><span>{euro(shop.fees)}</span></div>
         <div className="grand"><span>Totaal</span><span>{euro(shop.total)}</span></div>
+        {saved > 0 && <div className="saved"><span>Je bespaart met je passe-partout</span><span>{euro(saved)}</span></div>}
+        <p className="no-extra">Geen extra kosten bij het betalen.</p>
       </section>
 
-      <p className="note"><Icon name="shield" size={15} /> Je e-tickets staan direct na betalen in je mail. Geen account nodig.</p>
+      <ul className="usp-bar col" aria-label="Zekerheden">
+        {[...usps.slice(0, 2), 'Geen account nodig'].map((u) => <li key={u}><Icon name="check" size={14} /> {u}</li>)}
+      </ul>
+
+      <section className="section">
+        <h2 className="display h-sm">Vragen?</h2>
+        {faq.slice(0, 3).map((f) => <details key={f.q} className="faq"><summary>{f.q}</summary><p>{f.a}</p></details>)}
+      </section>
 
       <ActionBar note={<><b>Totaal {euro(shop.total)}</b> · {shop.count} items</>}>
-        <button type="button" className="btn btn-primary" onClick={() => nav('/gegevens')}>Afrekenen <Icon name="chev" /></button>
+        <button type="button" className="btn btn-primary" onClick={() => nav('/gegevens')}>Verder naar bestellen <Icon name="chev" /></button>
       </ActionBar>
     </main>
   );

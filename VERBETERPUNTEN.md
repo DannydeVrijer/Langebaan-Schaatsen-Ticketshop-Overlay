@@ -46,3 +46,22 @@ In de shop zit op elk scherm een knop **Waarom?** met de keuzes en bron. Samenge
 ## Bewust niet gedaan
 
 Nep-aftellers, "X mensen kijken nu", verzonnen reviews, vooraf aangevinkte extra's, verstopte "nee"-knoppen, hype-toon.
+
+## v2.1 – lessen van bol.com
+
+bol.com blokkeert automatische bezoekers; dit is gebaseerd op analyses van hun aanpak ([Frankwatching 2015](https://www.frankwatching.com/archive/2015/09/07/zo-doet-bol-com-aan-conversieoptimalisatie-op-de-betaalpagina/), [Frankwatching 2018](https://www.frankwatching.com/archive/2018/05/07/meer-conversie-op-jouw-winkelwagenpagina-10-tips/), [Rylee](https://rylee.nl/nl/blog/de-waarde-van-upsell-en-crosssell-technieken-bij-het-verkopen-op-bol.com)).
+
+| bol.com doet | In de ticketshop |
+|---|---|
+| Product en prijs eerst | Startpagina = tickets; programma/plattegrond/vragen achter een knop |
+| Belofte herhalen (bezorging, retour) | Zekerheden-balk: e-ticket direct in je mail · veilig betalen · kinderen t/m 5 gratis; herhaald in het mandje |
+| Pop-up na "In winkelwagen" + "vaak samen gekocht" | Toegevoegd-melding met passe-partout-upgrade en max. 2 extra's (kindticket, parkeren). Bewust "Handig erbij": zonder verkoopdata geen "vaak samen gekocht" |
+| Mandje rechtsboven met teller | Mandje-icoon met aantal en reserveringstijd |
+| Besparing tonen | Doorgestreepte prijs bij passe-partout (echte som van 3 dagen) en "je bespaart" in het mandje |
+| Geen onverwachte kosten | "Geen extra kosten bij het betalen" onder het totaal |
+| FAQ waar de twijfel ontstaat | Vragen onder het mandje en als knop op de startpagina |
+| Postcode + huisnummer | Adres wordt opgezocht (gesimuleerd; in het echt een postcode-API) |
+| Betaalmethode met social proof | "Meest gebruikt in NL" bij iDEAL |
+| Navigatie weg in checkout | Alleen terug naar je mandje |
+
+Niet overgenomen: sterren/reviews en "bestseller"-labels (geen echte data), kortingscodes en exit-intent-kortingen.
