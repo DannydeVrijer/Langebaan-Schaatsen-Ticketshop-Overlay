@@ -4,19 +4,22 @@ Klikbaar prototype van een **eigen ticketshop** voor de langebaantoernooien in T
 
 > Dit prototype praat (nog) niet met Paylogic. De API wordt nagebootst met dezelfde datastructuur. De knop **API** rechtsboven laat zien welke Paylogic-aanroep elke klik in het echt zou doen.
 
-## Wat zit erin
+## Wat zit erin (v2)
 
-- **Toernooien** – de 5 NL-toernooien uit schaatsen.nl. Alleen het **WCKT (30 okt – 1 nov 2026)** is gevuld met de echte producten en prijzen uit de huidige shop (opgehaald 5 okt 2026).
-- **Dagkeuze** met "vanaf"-prijs per dag en passe-partout.
-- **Interactieve plattegrond van Thialf**: tik op een vak (Noord/Zuid-bocht, West, Oost, VIP, mindervaliden). Uitverkochte vakken zijn uitgegrijsd.
-- **Per vak eigen content** (pitch, USP's) – staat niet in Paylogic, dit is de winst van een eigen voorkant.
-- **Slimme passe-partout-tip**: kies je hetzelfde vak op 2+ dagen, dan rekent de shop het verschil uit en zet hij het met één tik om.
-- **Parkeren als upsell** voor precies de dagen in je mandje.
-- **Wachtlijst-knop** bij uitverkochte producten (placeholder).
-- **Afrekenen in één scherm**: prijscheck bij Paylogic (`/bill`), gegevens, betaalmethode.
-- **Betaalovergang (simulatie)** – in het echt gaat de koper hier naar de betaalpagina van Paylogic en komt hij via `redirect_url` terug.
-- **Bevestiging** met agenda-bestand (.ics) en link naar de schaatsapp.
-- **Fallback-link** naar de standaard Paylogic-shop op elke shoppagina.
+Fictief voorbeeld dat **dezelfde stappen volgt als de huidige Paylogic-shop**, maar mobile first en in de nieuwe huisstijl:
+
+1. **Start** – programma per dag als tekst, "vanaf"-prijzen, passe-partout, plattegrond Thialf (West K–N, Oost A–E, Sven Kramer- en Ireen Wüst bocht, mindervaliden).
+2. **Tickets** – dagtabbladen, klikbare plattegrond, groepen Staan · Zitten · Beleven · Toegankelijk, + en − tellen direct mee.
+3. **Parkeren** – alleen voor de dagen in je mandje.
+4. **Mandje** – 20 minuten reservering met herstel na verlopen.
+5. **Gegevens** – dezelfde velden als nu, gegroepeerd en met uitleg; bescherming en opt-ins los en uit.
+6. **Betalen (simulatie)** → **Bedankt** met agenda, delen en één vervolgaanbod.
+
+Op elk scherm legt de knop **Waarom?** uit wat er anders is dan nu en welke marketingtechniek erachter zit. Zie ook **[VERBETERPUNTEN.md](VERBETERPUNTEN.md)**.
+
+Producten, prijzen en programma komen uit de huidige shop (5 okt 2026). Beschikbaarheid, parkeerterreinen en quotes (magievanschaatsen.nl) zijn voorbeeld. Placeholders staan tussen `[ ]`.
+
+v1 (API-prototype met plattegrond-eerst en BFF-schets) staat in de git-geschiedenis; [ARCHITECTUUR.md](ARCHITECTUUR.md) en `server/bff.mjs` blijven geldig voor een echte koppeling.
 
 ## Lokaal draaien
 
@@ -35,13 +38,9 @@ Zie **[ARCHITECTUUR.md](ARCHITECTUUR.md)**: wat bij jullie draait, wat bij Paylo
 ## Structuur
 
 ```
-src/api/types.ts      types volgens de Paylogic Shopping API (vereenvoudigd)
-src/api/mockData.ts   events + WCKT-producten/prijzen (uit de huidige shop)
-src/api/client.ts     API-laag: mock of echte BFF (VITE_API_BASE), logt elke aanroep
-src/data/zones.ts     eigen content per vak en per dag
-src/components/       ThialfMap (plattegrond), ApiPanel, UI uit de app
-src/screens/          Events, Shop, Checkout, Payment (simulatie), Done
-server/bff.mjs        voorbeeld-server die de Paylogic-sleutel bewaart (niet getest)
+src/data/event.ts     event, programma, producten, prijzen, parkeren, quotes
+src/data/why.ts       "Waarom?"-toelichting per scherm (met bronnen)
+src/state.tsx         mandje + echte 20-minutenreservering
+src/components/       ThialfMap, UI (kop, stappen, stepper, onderblad, actiebalk)
+src/screens/          Home, Day, Parking, Cart, Checkout, Pay (simulatie), Thanks
 ```
-
-Placeholders staan tussen `[ ]`.

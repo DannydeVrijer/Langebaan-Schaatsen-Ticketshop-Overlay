@@ -1,71 +1,79 @@
-import type { ZoneKey } from '../api/types';
-import { euro } from '../state';
-
-type Z = Exclude<ZoneKey, 'parking'>;
-export type ZoneInfo = { from: number | null; soldOut: boolean };
+import type { Zone } from '../data/event';
 
 /**
- * Schematische plattegrond van Thialf (noord boven). Elk vak is aanklikbaar.
- * Let op: indeling is indicatief; exacte ligging van VIP en mindervaliden bevestigen.
+ * Plattegrond Thialf zoals in de huidige shop: West boven (vak K–N), Oost onder (vak A–E, finishzijde),
+ * Sven Kramer bocht (Zuid) links, Ireen Wüst bocht (Noord) rechts, mindervaliden bij de Sven Kramer bocht.
+ * Indicatief; VIP (2e etage Oost) schematisch.
  */
-const shapes: Record<Z, { d: string; label: string; lx: number; ly: number; rotate?: number }> = {
-  noord: { d: 'M 66 150 A 104 104 0 0 1 274 150 L 238 150 A 68 68 0 0 0 102 150 Z', label: 'NOORD', lx: 170, ly: 64 },
-  zuid: { d: 'M 66 270 A 104 104 0 0 0 274 270 L 238 270 A 68 68 0 0 1 102 270 Z', label: 'ZUID', lx: 170, ly: 357 },
-  west: { d: 'M 66 156 H 100 V 226 H 66 Z', label: 'WEST', lx: 83, ly: 191, rotate: -90 },
-  mv: { d: 'M 66 232 H 100 V 264 H 66 Z', label: '♿', lx: 83, ly: 252 },
-  oost: { d: 'M 240 156 H 274 V 264 H 240 Z', label: 'OOST', lx: 257, ly: 210, rotate: 90 },
-  vip: { d: 'M 280 170 H 300 V 250 H 280 Z', label: 'VIP', lx: 290, ly: 210, rotate: 90 },
+
+const P = (cx: number, cy: number, r: number, a: number) => [cx + r * Math.cos((a * Math.PI) / 180), cy + r * Math.sin((a * Math.PI) / 180)].map((v) => v.toFixed(1)).join(' ');
+const band = (cx: number, cy: number, ri: number, ro: number, a0: number, a1: number) =>
+  `M ${P(cx, cy, ro, a0)} A ${ro} ${ro} 0 0 1 ${P(cx, cy, ro, a1)} L ${P(cx, cy, ri, a1)} A ${ri} ${ri} 0 0 0 ${P(cx, cy, ri, a0)} Z`;
+
+const cells = (x0: number, y: number, w: number, h: number, labels: string[]) =>
+  labels.map((l, i) => ({ x: x0 + i * w, y, w, h, l }));
+
+const WEST = cells(116, 8, 32, 24, ['K', 'L', 'M', 'N']);
+const OOST = cells(100, 174, 32, 24, ['E', 'D', 'C', 'B', 'A']);
+
+type Props = {
+  selected?: Zone | null;
+  available?: Partial<Record<Zone, boolean>>; // false = uitverkocht/niet op deze dag
+  onSelect?: (z: Zone) => void;
+  compact?: boolean;
+  label?: string;
 };
 
-export function ThialfMap({ info, selected, onSelect }: { info: Record<Z, ZoneInfo | undefined>; selected: Z | null; onSelect: (z: Z) => void }) {
+export function ThialfMap({ selected = null, available, onSelect, compact, label = 'Plattegrond Thialf' }: Props) {
+  const cls = (z: Zone) => {
+    const off = available && available[z] === false;
+    const none = available && available[z] === undefined;
+    return `zone ${selected === z ? 'on' : ''} ${off ? 'off' : ''} ${none ? 'none' : ''} ${onSelect ? 'tap' : ''}`;
+  };
+  const act = (z: Zone) => (onSelect && available?.[z] !== false && available?.[z] !== undefined ? () => onSelect(z) : undefined);
+  const a11y = (z: Zone, name: string) => onSelect ? {
+    role: 'button', tabIndex: available?.[z] ? 0 : -1, 'aria-label': name, 'aria-pressed': selected === z,
+    onKeyDown: (e: React.KeyboardEvent) => { if ((e.key === 'Enter' || e.key === ' ') && act(z)) { e.preventDefault(); act(z)!(); } },
+  } : {};
+
   return (
-    <svg className="thialf" viewBox="40 20 280 380" role="group" aria-label="Plattegrond Thialf: kies je vak">
-      <defs>
-        <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#E9F2FF" stopOpacity=".22" />
-          <stop offset="1" stopColor="#A8CFFD" stopOpacity=".06" />
-        </linearGradient>
-        <linearGradient id="lane" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#FFFFFF" />
-          <stop offset=".6" stopColor="#A8CFFD" />
-          <stop offset="1" stopColor="#A8CFFD" stopOpacity=".2" />
-        </linearGradient>
-      </defs>
+    <svg className={`thialf ${compact ? 'compact' : ''}`} viewBox="40 2 280 218" role={onSelect ? 'group' : 'img'} aria-label={label}>
+      {/* ijs + baan */}
+      <rect x="86" y="60" width="188" height="86" rx="43" className="ice" />
+      <rect x="92" y="66" width="176" height="74" rx="37" className="lane" />
+      <rect x="108" y="80" width="144" height="46" rx="23" className="lane inner" />
+      {!compact && <text x="180" y="138" textAnchor="middle" className="t-finish">FINISHZIJDE</text>}
 
-      {/* ijsbaan */}
-      <rect x="106" y="86" width="128" height="248" rx="64" fill="url(#ice)" />
-      <rect x="110" y="90" width="120" height="240" rx="60" fill="none" stroke="url(#lane)" strokeWidth="5" />
-      <rect x="128" y="108" width="84" height="204" rx="42" fill="none" stroke="url(#lane)" strokeWidth="2.5" opacity=".7" />
-      <text x="170" y="214" textAnchor="middle" className="map-ice">400 M</text>
-      <line x1="230" y1="232" x2="212" y2="232" stroke="#fff" strokeWidth="2" opacity=".8" />
-      <text x="221" y="246" textAnchor="middle" className="map-finish">FINISH</text>
+      {/* bochten */}
+      <g className={cls('zuid')} onClick={act('zuid')} {...a11y('zuid', 'Sven Kramer bocht, staanplaats Zuid')}>
+        <path d={band(129, 103, 48, 66, 116, 270)} />
+        {!compact && <text x="72" y="96" textAnchor="middle" dominantBaseline="middle" transform="rotate(-90 72 96)">SVEN KRAMER</text>}
+      </g>
+      <g className={cls('mv')} onClick={act('mv')} {...a11y('mv', 'Mindervaliden tribune')}>
+        <path d={band(129, 103, 48, 66, 92, 112)} />
+        <text x="113" y="163" textAnchor="middle" dominantBaseline="middle" className="t-ico">♿</text>
+      </g>
+      <g className={cls('noord')} onClick={act('noord')} {...a11y('noord', 'Ireen Wüst bocht, staanplaats Noord')}>
+        <path d={band(231, 103, 48, 66, -90, 90)} />
+        {!compact && <text x="288" y="103" textAnchor="middle" dominantBaseline="middle" transform="rotate(90 288 103)">IREEN WÜST</text>}
+      </g>
 
-      {(Object.keys(shapes) as Z[]).map((z) => {
-        const s = shapes[z];
-        const i = info[z];
-        const disabled = !i || i.soldOut;
-        const on = selected === z;
-        return (
-          <g
-            key={z}
-            className={`zone ${on ? 'on' : ''} ${disabled ? 'off' : ''}`}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            aria-pressed={on}
-            aria-disabled={disabled}
-            aria-label={`${z}${i?.from != null ? `, vanaf ${euro(i.from)}` : ''}${i?.soldOut ? ', uitverkocht' : ''}${!i ? ', niet beschikbaar op deze dag' : ''}`}
-            onClick={() => !disabled && onSelect(z)}
-            onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(z); } }}
-          >
-            <path d={s.d} />
-            <text x={s.lx} y={s.ly} textAnchor="middle" dominantBaseline="middle" transform={s.rotate ? `rotate(${s.rotate} ${s.lx} ${s.ly})` : undefined}>{s.label}</text>
-          </g>
-        );
-      })}
+      {/* West */}
+      <g className={cls('west')} onClick={act('west')} {...a11y('west', 'Tribune West, vak K tot N')}>
+        {WEST.map((c) => <rect key={c.l} x={c.x} y={c.y} width={c.w - 3} height={c.h} rx="4" />)}
+        {!compact && WEST.map((c) => <text key={c.l} x={c.x + (c.w - 3) / 2} y={c.y + 16} textAnchor="middle">{c.l}</text>)}
+      </g>
+      {/* Oost */}
+      <g className={cls('oost')} onClick={act('oost')} {...a11y('oost', 'Tribune Oost, vak A tot E, finishzijde')}>
+        {OOST.map((c) => <rect key={c.l} x={c.x} y={c.y} width={c.w - 3} height={c.h} rx="4" />)}
+        {!compact && OOST.map((c) => <text key={c.l} x={c.x + (c.w - 3) / 2} y={c.y + 16} textAnchor="middle">{c.l}</text>)}
+      </g>
+      {/* VIP 2e etage */}
+      <g className={cls('vip')} onClick={act('vip')} {...a11y('vip', 'VIP-arrangement, 2e etage Oost')}>
+        <rect x="124" y="202" width="112" height="14" rx="4" />
+        {!compact && <text x="180" y="212" textAnchor="middle" className="t-small">VIP · 2E ETAGE</text>}
+      </g>
 
-      {/* prijslabels bochten */}
-      {info.noord?.from != null && <text x="170" y="40" textAnchor="middle" className="map-price">vanaf {euro(info.noord.from)}</text>}
-      {info.zuid?.from != null && <text x="170" y="392" textAnchor="middle" className="map-price">vanaf {euro(info.zuid.from)}</text>}
     </svg>
   );
 }

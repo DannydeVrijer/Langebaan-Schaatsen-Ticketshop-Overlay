@@ -1,131 +1,188 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
-import { Icon, Stepper, Steps, TopBar } from '../components/ui';
-import { audienceLabel, days, zones } from '../data/zones';
-import { euro, useShop, type Consumer } from '../state';
+import { audienceLabel, euro, paymentMethods, zoneInfo, dayOf } from '../data/event';
+import { ActionBar, Icon, ShopBar, StepBar } from '../components/ui';
+import { useShop } from '../state';
 
-const empty: Consumer = { first_name: '', last_name: '', email: '', country: 'NL', optin: false };
-
-export function lineTitle(p: { zone: string; day: string; audience: keyof typeof audienceLabel; subtitle: { nl: string } }) {
-  if (p.zone === 'parking') return p.subtitle.nl.split(' - ')[0] + ' · Parkeren';
-  const z = zones[p.zone as keyof typeof zones];
-  const d = days.find((x) => x.key === p.day);
-  return `${z.title} · ${d?.key === 'pp' ? 'Passe-partout' : d?.label}`;
-}
+type F = {
+  first: string; last: string; email: string; phone: string;
+  dd: string; mm: string; yyyy: string; gender: string;
+  country: string; zip: string; street: string; city: string;
+  pay: string; protect: '' | 'ja' | 'nee';
+  optHos: boolean; optWa: boolean; optKnsb: boolean;
+};
+const init: F = { first: '', last: '', email: '', phone: '', dd: '', mm: '', yyyy: '', gender: '', country: 'NL', zip: '', street: '', city: '', pay: '', protect: '', optHos: false, optWa: false, optKnsb: false };
+const PROTECT = 2;
 
 export default function Checkout() {
   const shop = useShop();
   const nav = useNavigate();
-  const [c, setC] = useState<Consumer>(empty);
-  const [pm, setPm] = useState('');
-  const [billOk, setBillOk] = useState<'checking' | 'ok' | 'diff' | 'error'>('checking');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [touched, setTouched] = useState(false);
+  const [f, setF] = useState<F>(init);
+  const [tried, setTried] = useState(false);
+  const [openSum, setOpenSum] = useState(false);
 
-  // Paylogic rekent het bedrag na; bij een verschil tonen we het.
-  useEffect(() => {
-    if (!shop.lines.length) return;
-    setBillOk('checking');
-    api.getBill(shop.lines).then((b) => setBillOk(Math.abs(b.total.amount - shop.total) < 0.01 ? 'ok' : 'diff')).catch(() => setBillOk('error'));
-  }, [shop.total]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!shop.count) return <Navigate to="/winkelmand" replace />;
 
-  useEffect(() => { if (!pm && shop.paymentMethods[0]) setPm(shop.paymentMethods[0].uid); }, [shop.paymentMethods, pm]);
+  const set = <K extends keyof F>(k: K, v: F[K]) => setF((x) => ({ ...x, [k]: v }));
+  const total = shop.total + (f.protect === 'ja' ? PROTECT : 0);
 
-  if (!shop.lines.length) return <Navigate to={shop.eventUid ? `/event/${shop.eventUid}` : '/'} replace />;
+  const birthOk = (() => {
+    const d = +f.dd, m = +f.mm, y = +f.yyyy;
+    if (!d || !m || !y || f.yyyy.length !== 4) return false;
+    const dt = new Date(y, m - 1, d);
+    return dt.getDate() === d && dt.getMonth() === m - 1 && y > 1900 && dt < new Date();
+  })();
 
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c.email);
-  const valid = c.first_name.trim() && c.last_name.trim() && emailOk && pm;
+  const err: Partial<Record<keyof F, string>> = {
+    first: f.first.trim() ? '' : 'Vul je voornaam in.',
+    last: f.last.trim() ? '' : 'Vul je achternaam in.',
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email) ? '' : 'Vul een geldig e-mailadres in, bijv. naam@voorbeeld.nl.',
+    dd: birthOk ? '' : 'Vul een geldige geboortedatum in (dag, maand, jaar).',
+    gender: f.gender ? '' : 'Kies een optie.',
+    zip: f.zip.trim() ? '' : 'Vul je postcode in.',
+    street: f.street.trim() ? '' : 'Vul je straat en huisnummer in.',
+    city: f.city.trim() ? '' : 'Vul je woonplaats in.',
+    pay: f.pay ? '' : 'Kies hoe je wilt betalen.',
+    protect: f.protect ? '' : 'Kies of je annuleringsbescherming wilt.',
+  };
+  const errors = Object.entries(err).filter(([, v]) => v);
+  const show = (k: keyof F) => (tried && err[k] ? <span className="field-err" id={`e-${k}`}>{err[k]}</span> : null);
+  const inv = (k: keyof F) => ({ 'aria-invalid': tried && !!err[k], 'aria-describedby': tried && err[k] ? `e-${k}` : undefined });
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    setTouched(true);
-    if (!valid) return;
-    setBusy(true); setErr(null);
-    try {
-      const order = await api.createOrder({
-        products: shop.lines.map((l) => ({ product: l.product.uid, quantity: l.quantity })),
-        consumer: { first_name: c.first_name, last_name: c.last_name, email: c.email, country: c.country },
-        payment_method: pm,
-        redirect_url: `${location.origin}${location.pathname}#/bevestiging`,
-      }, shop.total);
-      shop.setLastOrder({ uid: order.uid, total: shop.total, lines: shop.lines, consumer: c, method: shop.paymentMethods.find((m) => m.uid === pm)?.name ?? '' });
-      nav(order._links.payment.href.replace(/^#/, ''));
-    } catch {
-      setErr('Er ging iets mis bij het aanmaken van je bestelling. Je bent niets kwijt; probeer het opnieuw.');
-      setBusy(false);
+    setTried(true);
+    if (errors.length) {
+      const first = errors[0][0];
+      setTimeout(() => document.getElementById(`f-${first}`)?.focus(), 0);
+      return;
     }
+    shop.setOrder({
+      id: 'WCKT-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+      lines: shop.lines, total, fees: shop.fees, email: f.email, firstName: f.first.trim(),
+      protection: f.protect === 'ja', method: paymentMethods.find((p) => p.id === f.pay)!.name,
+    });
+    nav('/betalen');
   }
 
-  const set = (k: keyof Consumer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setC({ ...c, [k]: e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value });
-
   return (
-    <main className="screen has-cart">
-      <TopBar back={{ to: `/event/${shop.eventUid}`, label: 'Tickets aanpassen' }} />
-      <h1 className="display" style={{ fontSize: 34 }}>Je bestelling</h1>
-      <Steps at={2} />
+    <main className="screen has-ab">
+      <ShopBar back={-1} whyKey="checkout" />
+      <StepBar at={4} />
 
-      <section className="card">
-        {shop.lines.map((l) => (
-          <div key={l.product.uid} className="prod">
-            <div className="info">
-              <span className="n">{lineTitle(l.product)}</span>
-              <span className="s">{l.product.zone === 'parking' ? 'Parkeerticket' : audienceLabel[l.product.audience]} · {euro(l.product.price.amount)}</span>
-            </div>
-            <Stepper value={l.quantity} max={l.product.max_per_order} onChange={(n) => shop.setQty(l.product.uid, n)} label={lineTitle(l.product)} />
-          </div>
-        ))}
-        <div className="divider" />
-        <div className="totals">
-          <span>Waarvan servicekosten</span><span>{euro(shop.fees)}</span>
-          <strong>Totaal</strong><strong>{euro(shop.total)}</strong>
-        </div>
-        <p className={`bill-check ${billOk}`}>
-          {billOk === 'checking' && 'Prijs wordt gecontroleerd…'}
-          {billOk === 'ok' && <><Icon name="check" size={14} /> Prijs en beschikbaarheid gecontroleerd</>}
-          {billOk === 'diff' && 'Let op: de prijs is gewijzigd. Controleer je bestelling.'}
-          {billOk === 'error' && 'Prijscontrole lukt nu niet; je ziet het definitieve bedrag bij het betalen.'}
-        </p>
+      <header className="day-head">
+        <h1 className="display">Bijna klaar</h1>
+        <p className="muted">Nog één stap. Je tickets staan daarna direct in je mail.</p>
+      </header>
+
+      <section className={`sum-card ${openSum ? 'open' : ''}`}>
+        <button type="button" className="sum-toggle" aria-expanded={openSum} onClick={() => setOpenSum((v) => !v)}>
+          <span>Je bestelling ({shop.count})</span><b>{euro(total)}</b><Icon name="chev" size={16} />
+        </button>
+        {openSum && (
+          <ul className="sum-lines">
+            {shop.lines.map((l) => (
+              <li key={l.item.id}>
+                <span>{l.qty}× {l.kind === 'ticket' ? `${zoneInfo[l.item.zone].title} · ${l.item.day === 'pp' ? 'passe-partout' : dayOf(l.item.day)!.name.toLowerCase()} · ${audienceLabel[l.item.audience].split(' (')[0].toLowerCase()}` : `Parkeren ${l.item.lot} · ${dayOf(l.item.day)!.name.toLowerCase()}`}</span>
+                <span>{euro(l.item.price * l.qty)}</span>
+              </li>
+            ))}
+            {f.protect === 'ja' && <li><span>Annuleringsbescherming</span><span>{euro(PROTECT)}</span></li>}
+            <li className="muted"><span>Waarvan servicekosten</span><span>{euro(shop.fees)}</span></li>
+          </ul>
+        )}
       </section>
 
-      <form className="section form" onSubmit={submit} noValidate>
-        <h2 className="display">Je gegevens</h2>
-        <p className="small muted">Je tickets sturen we naar dit e-mailadres. Namen per ticket vul je later in, als personaliseren nodig is.</p>
-        <div className="grid-2">
-          <label>Voornaam<input autoComplete="given-name" value={c.first_name} onChange={set('first_name')} aria-invalid={touched && !c.first_name.trim()} /></label>
-          <label>Achternaam<input autoComplete="family-name" value={c.last_name} onChange={set('last_name')} aria-invalid={touched && !c.last_name.trim()} /></label>
-        </div>
-        <label>E-mailadres<input type="email" inputMode="email" autoComplete="email" value={c.email} onChange={set('email')} aria-invalid={touched && !emailOk} /></label>
-        {touched && !emailOk && <span className="field-err">Vul een geldig e-mailadres in.</span>}
-        <label>Land
-          <select value={c.country} onChange={set('country')} autoComplete="country">
-            <option value="NL">Nederland</option><option value="BE">België</option><option value="DE">Duitsland</option><option value="NO">Noorwegen</option><option value="XX">Anders</option>
-          </select>
-        </label>
-        <label className="check-row">
-          <input type="checkbox" checked={c.optin} onChange={set('optin')} />
-          <span>Houd me op de hoogte van schaatsnieuws en ticketacties (schaatsfanmailing).</span>
-        </label>
+      <form className="form" onSubmit={submit} noValidate>
+        {tried && errors.length > 0 && (
+          <p className="alert" role="alert">Nog {errors.length} {errors.length === 1 ? 'veld' : 'velden'} om in te vullen. Ze zijn rood gemarkeerd.</p>
+        )}
 
-        <h2 className="display" style={{ marginTop: 22 }}>Betaalmethode</h2>
-        <div className="pm-grid" role="radiogroup" aria-label="Betaalmethode">
-          {shop.paymentMethods.map((m) => (
-            <button key={m.uid} type="button" role="radio" aria-checked={pm === m.uid} className={`pm ${pm === m.uid ? 'on' : ''}`} onClick={() => setPm(m.uid)}>
-              <span className="i" aria-hidden>{m.icon || ''}</span>{m.name}
+        <fieldset>
+          <legend><span className="n">1</span> Waar sturen we je tickets heen?</legend>
+          <div className="grid-2">
+            <label>Voornaam<input id="f-first" autoComplete="given-name" value={f.first} onChange={(e) => set('first', e.target.value)} {...inv('first')} />{show('first')}</label>
+            <label>Achternaam<input id="f-last" autoComplete="family-name" value={f.last} onChange={(e) => set('last', e.target.value)} {...inv('last')} />{show('last')}</label>
+          </div>
+          <label>E-mailadres<span className="why">Hier komen je e-tickets binnen.</span>
+            <input id="f-email" type="email" inputMode="email" autoComplete="email" value={f.email} onChange={(e) => set('email', e.target.value)} {...inv('email')} />{show('email')}
+          </label>
+          <label><span className="lbl-row">Telefoonnummer <i className="opt">optioneel</i></span><span className="why">Alleen als er op de dag zelf iets verandert.</span>
+            <div className="phone"><select aria-label="Landcode" defaultValue="+31"><option>+31</option><option>+32</option><option>+49</option><option>+47</option></select>
+              <input type="tel" inputMode="tel" autoComplete="tel-national" value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="6 12345678" /></div>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend><span className="n">2</span> Een paar vragen van de organisatie</legend>
+          <p className="why block">De KNSB en House of Sports gebruiken dit om bezoekers beter te leren kennen. [doel bevestigen + privacyverklaring linken]</p>
+          <div className="lbl">Geboortedatum</div>
+          <div className="dob" role="group" aria-label="Geboortedatum">
+            <input id="f-dd" inputMode="numeric" maxLength={2} placeholder="DD" aria-label="Dag" value={f.dd} onChange={(e) => set('dd', e.target.value.replace(/\D/g, ''))} {...inv('dd')} />
+            <input inputMode="numeric" maxLength={2} placeholder="MM" aria-label="Maand" value={f.mm} onChange={(e) => set('mm', e.target.value.replace(/\D/g, ''))} {...inv('dd')} />
+            <input inputMode="numeric" maxLength={4} placeholder="JJJJ" aria-label="Jaar" autoComplete="bday-year" value={f.yyyy} onChange={(e) => set('yyyy', e.target.value.replace(/\D/g, ''))} {...inv('dd')} />
+          </div>
+          {show('dd')}
+          <div className="lbl" id="g-lbl">Geslacht</div>
+          <div className="seg" role="radiogroup" aria-labelledby="g-lbl" id="f-gender" tabIndex={-1}>
+            {['Man', 'Vrouw', 'Anders', 'Zeg ik liever niet'].map((g) => (
+              <button key={g} type="button" role="radio" aria-checked={f.gender === g} className={f.gender === g ? 'on' : ''} onClick={() => set('gender', g)}>{g}</button>
+            ))}
+          </div>
+          {show('gender')}
+          <label>Land
+            <select autoComplete="country" value={f.country} onChange={(e) => set('country', e.target.value)}>
+              <optgroup label="Meest gekozen"><option value="NL">Nederland</option><option value="BE">België</option><option value="DE">Duitsland</option><option value="NO">Noorwegen</option></optgroup>
+              <optgroup label="Overige landen"><option value="AT">Oostenrijk</option><option value="CA">Canada</option><option value="CN">China</option><option value="JP">Japan</option><option value="PL">Polen</option><option value="US">Verenigde Staten</option><option value="XX">Ander land</option></optgroup>
+            </select>
+          </label>
+          <div className="grid-2 zip">
+            <label>Postcode<input id="f-zip" autoComplete="postal-code" value={f.zip} onChange={(e) => set('zip', e.target.value.toUpperCase())} {...inv('zip')} />{show('zip')}</label>
+            <label>Woonplaats<input id="f-city" autoComplete="address-level2" value={f.city} onChange={(e) => set('city', e.target.value)} {...inv('city')} />{show('city')}</label>
+          </div>
+          <label>Straat en huisnummer<input id="f-street" autoComplete="street-address" value={f.street} onChange={(e) => set('street', e.target.value)} {...inv('street')} />{show('street')}</label>
+        </fieldset>
+
+        <fieldset>
+          <legend><span className="n">3</span> Hoe wil je betalen?</legend>
+          <div className="pay-grid" role="radiogroup" aria-label="Betaalmethode" id="f-pay" tabIndex={-1}>
+            {paymentMethods.map((p) => (
+              <button key={p.id} type="button" role="radio" aria-checked={f.pay === p.id} className={`pay ${f.pay === p.id ? 'on' : ''}`} onClick={() => set('pay', p.id)}>
+                <span className="radio" aria-hidden />{p.name}
+              </button>
+            ))}
+          </div>
+          {show('pay')}
+          <p className="why block"><Icon name="ticket" size={14} /> Verzending: e-tickets per mail, direct na betalen.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend><span className="n">4</span> Annuleringsbescherming</legend>
+          <p className="why block">Kun je onverwacht niet? Dan krijg je tot 100% van je ticketprijs terug, bijvoorbeeld bij ziekte, letsel of vertraging in het OV. Afgehandeld door XCover. [voorwaarden linken]</p>
+          <div className="choice" role="radiogroup" aria-label="Annuleringsbescherming" id="f-protect" tabIndex={-1}>
+            <button type="button" role="radio" aria-checked={f.protect === 'ja'} className={f.protect === 'ja' ? 'on' : ''} onClick={() => set('protect', 'ja')}>
+              <span className="radio" aria-hidden /><span><b>Ja, beschermen</b><small>+ {euro(PROTECT)}</small></span>
             </button>
-          ))}
-        </div>
+            <button type="button" role="radio" aria-checked={f.protect === 'nee'} className={f.protect === 'nee' ? 'on' : ''} onClick={() => set('protect', 'nee')}>
+              <span className="radio" aria-hidden /><span><b>Nee, niet nodig</b><small>geen extra kosten</small></span>
+            </button>
+          </div>
+          {show('protect')}
+        </fieldset>
 
-        {err && <p className="alert">{err}</p>}
+        <fieldset>
+          <legend><span className="n">5</span> Op de hoogte blijven? <i className="opt">optioneel</i></legend>
+          <label className="check"><input type="checkbox" checked={f.optKnsb} onChange={(e) => set('optKnsb', e.target.checked)} /><span><b>Als eerste horen wanneer de kaartverkoop start</b>, plus schaatsnieuws en acties van schaatsen.nl.</span></label>
+          <label className="check"><input type="checkbox" checked={f.optHos} onChange={(e) => set('optHos', e.target.checked)} /><span><b>Updates over evenementen en promoties</b> van House of Sports, eventpartner van de KNSB.</span></label>
+          <label className="check"><input type="checkbox" checked={f.optWa} onChange={(e) => set('optWa', e.target.checked)} /><span><b>Via WhatsApp</b> berichten ontvangen van House of Sports.</span></label>
+          <p className="why block">Afmelden kan altijd met één klik. Je aankoop hangt hier niet van af.</p>
+        </fieldset>
 
-        <div className="cart-bar show">
-          <div className="sum"><span className="c">Totaal</span><span className="t">{euro(shop.total)}</span></div>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Even geduld…' : <><Icon name="lock" /> Betalen</>}
-          </button>
-        </div>
+        <p className="terms">Door op "Betaal" te tikken ga je akkoord met de algemene voorwaarden van de ticketpartner en House of Sports Events en bevestig je dat je 18 jaar of ouder bent. [links naar voorwaarden en privacybeleid]</p>
+
+        <ActionBar note={<><Icon name="lock" size={14} /> Veilig betalen{f.pay ? ` met ${paymentMethods.find((p) => p.id === f.pay)!.name}` : ''}</>}>
+          <button type="submit" className="btn btn-primary">Betaal <span className="num">{euro(total)}</span></button>
+        </ActionBar>
       </form>
     </main>
   );

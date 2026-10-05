@@ -1,12 +1,13 @@
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { ShopProvider } from './state';
-import { ApiToggle } from './components/ApiPanel';
-import Events from './screens/Events';
-import Shop from './screens/Shop';
+import Home from './screens/Home';
+import Day from './screens/Day';
+import Parking from './screens/Parking';
+import Cart from './screens/Cart';
 import Checkout from './screens/Checkout';
-import Payment from './screens/Payment';
-import Done from './screens/Done';
+import Pay from './screens/Pay';
+import Thanks from './screens/Thanks';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -21,14 +22,15 @@ export default function App() {
         <ScrollTop />
         <div className="app">
           <Routes>
-            <Route path="/" element={<Events />} />
-            <Route path="/event/:uid" element={<Shop />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/tickets/:day" element={<Day />} />
+            <Route path="/parkeren" element={<Parking />} />
+            <Route path="/winkelmand" element={<Cart />} />
             <Route path="/gegevens" element={<Checkout />} />
-            <Route path="/betalen/:order" element={<Payment />} />
-            <Route path="/bevestiging" element={<Done />} />
-            <Route path="*" element={<Events />} />
+            <Route path="/betalen" element={<Pay />} />
+            <Route path="/bedankt" element={<Thanks />} />
+            <Route path="*" element={<Home />} />
           </Routes>
-          <ApiToggle />
         </div>
       </ShopProvider>
     </HashRouter>

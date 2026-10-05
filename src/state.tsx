@@ -1,72 +1,86 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { PaymentMethod, ShopProduct } from './api/types';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { parking, products, RESERVATION_MIN, type ParkingProduct, type Product } from './data/event';
 
-export type CartLine = { product: ShopProduct; quantity: number };
-export type Consumer = { first_name: string; last_name: string; email: string; country: string; optin: boolean };
-export type LastOrder = { uid: string; total: number; lines: CartLine[]; consumer: Consumer; method: string };
+export type Line =
+  | { kind: 'ticket'; item: Product; qty: number }
+  | { kind: 'parking'; item: ParkingProduct; qty: number };
+
+export type Order = { id: string; lines: Line[]; total: number; fees: number; email: string; firstName: string; protection: boolean; method: string };
 
 type Ctx = {
-  eventUid: string | null;
-  products: ShopProduct[];
-  paymentMethods: PaymentMethod[];
-  setCatalog: (eventUid: string, products: ShopProduct[], pm: PaymentMethod[]) => void;
   qty: Record<string, number>;
-  setQty: (uid: string, n: number) => void;
-  swap: (remove: string[], add: Record<string, number>) => void;
-  clear: () => void;
-  lines: CartLine[];
+  setQty: (id: string, n: number) => void;
+  lines: Line[];
+  ticketCount: number;
   count: number;
   total: number;
   fees: number;
-  lastOrder: LastOrder | null;
-  setLastOrder: (o: LastOrder | null) => void;
+  /** ms over in de reservering; null als er niets gereserveerd is */
+  remaining: number | null;
+  expired: Record<string, number> | null;
+  restore: () => void;
+  dismissExpired: () => void;
+  clear: () => void;
+  order: Order | null;
+  setOrder: (o: Order) => void;
 };
 
 const C = createContext<Ctx | null>(null);
 const round = (n: number) => Math.round(n * 100) / 100;
+const byId = new Map<string, Product | ParkingProduct>([...products, ...parking].map((p) => [p.id, p]));
 
 export function ShopProvider({ children }: { children: ReactNode }) {
-  const [eventUid, setEventUid] = useState<string | null>(null);
-  const [products, setProducts] = useState<ShopProduct[]>([]);
-  const [paymentMethods, setPm] = useState<PaymentMethod[]>([]);
   const [qty, setQtyMap] = useState<Record<string, number>>({});
-  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [expired, setExpired] = useState<Record<string, number> | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
 
-  const setCatalog = useCallback((uid: string, p: ShopProduct[], pm: PaymentMethod[]) => {
-    setEventUid((prev) => { if (prev !== uid) setQtyMap({}); return uid; });
-    setProducts(p);
-    setPm(pm);
-  }, []);
+  const empty = Object.keys(qty).length === 0;
 
-  const setQty = useCallback((uid: string, n: number) => {
-    setQtyMap((q) => {
-      const next = { ...q };
-      if (n <= 0) delete next[uid]; else next[uid] = n;
-      return next;
-    });
-  }, []);
+  // Echte reservering: start bij het eerste item, stopt als het mandje leeg is. Reset nooit vanzelf.
+  useEffect(() => {
+    if (empty) { setStartedAt(null); return; }
+    setStartedAt((s) => s ?? Date.now());
+    setNow(Date.now());
+  }, [empty]);
 
-  const swap = useCallback((remove: string[], add: Record<string, number>) => {
-    setQtyMap((q) => {
-      const next = { ...q };
-      remove.forEach((u) => delete next[u]);
-      Object.entries(add).forEach(([u, n]) => { next[u] = (next[u] ?? 0) + n; });
-      return next;
-    });
+  useEffect(() => {
+    if (!startedAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [startedAt]);
+
+  const remaining = startedAt ? Math.max(0, startedAt + RESERVATION_MIN * 60_000 - now) : null;
+
+  useEffect(() => {
+    if (remaining === 0) { setExpired(qty); setQtyMap({}); }
+  }, [remaining]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setQty = useCallback((id: string, n: number) => {
+    setQtyMap((q) => { const next = { ...q }; if (n <= 0) delete next[id]; else next[id] = n; return next; });
   }, []);
 
   const value = useMemo<Ctx>(() => {
-    const lines = products.filter((p) => qty[p.uid]).map((p) => ({ product: p, quantity: qty[p.uid] }));
+    const lines: Line[] = Object.entries(qty).flatMap(([id, n]): Line[] => {
+      const item = byId.get(id);
+      if (!item) return [];
+      return 'lot' in item ? [{ kind: 'parking', item, qty: n }] : [{ kind: 'ticket', item, qty: n }];
+    });
+    const total = round(lines.reduce((s, l) => s + l.item.price * l.qty, 0));
+    const fees = round(lines.reduce((s, l) => s + (l.kind === 'ticket' ? l.item.fee : 0) * l.qty, 0));
     return {
-      eventUid, products, paymentMethods, setCatalog, qty, setQty, swap,
+      qty, setQty, lines, total, fees,
+      ticketCount: lines.filter((l) => l.kind === 'ticket').reduce((s, l) => s + l.qty, 0),
+      count: lines.reduce((s, l) => s + l.qty, 0),
+      remaining,
+      expired,
+      restore: () => { if (expired) { setNow(Date.now()); setStartedAt(null); setQtyMap(expired); setExpired(null); } },
+      dismissExpired: () => setExpired(null),
       clear: () => setQtyMap({}),
-      lines,
-      count: lines.reduce((s, l) => s + l.quantity, 0),
-      total: round(lines.reduce((s, l) => s + l.product.price.amount * l.quantity, 0)),
-      fees: round(lines.reduce((s, l) => s + l.product.service_cost.amount * l.quantity, 0)),
-      lastOrder, setLastOrder,
+      order, setOrder,
     };
-  }, [eventUid, products, paymentMethods, setCatalog, qty, setQty, swap, lastOrder]);
+  }, [qty, setQty, remaining, expired, order]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }
@@ -77,4 +91,7 @@ export const useShop = () => {
   return c;
 };
 
-export const euro = (n: number) => n.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
+export const mmss = (ms: number) => {
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
