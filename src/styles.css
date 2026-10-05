@@ -740,3 +740,20 @@ details.faq summary { min-height: 44px; align-items: center; }
 .ab-note:empty { display: none; }
 .shopbar-title { font-size: 15px; }
 .why-btn { flex: none; }
+
+/* ---------- v2.3: stap 1 = dag kiezen ---------- */
+.pick-h { margin: 22px 0 10px; font: 800 22px var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
+.pick-list { display: flex; flex-direction: column; gap: 10px; }
+.pick { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px; min-height: 76px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line-strong); }
+.pick:active { background: var(--glass-2); }
+.pick.pp { border-style: dashed; border-color: var(--ice-300); }
+.pick-date { width: 50px; flex: none; text-align: center; background: var(--white); color: var(--ink-900); border-radius: 10px; padding: 7px 0; line-height: 1; }
+.pick-date b { display: block; font: 800 22px var(--font-display); }
+.pick-date i { display: block; font: 800 11px var(--font-body); font-style: normal; text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+.pick-date.pp { background: var(--mvs-blue); color: var(--white); }
+.pick-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick-txt b { font-size: 17px; }
+.pick-txt small { font-size: 14px; color: var(--text-muted); }
+.pick .chev { color: var(--text-faint); }
+.pick .dot-n { top: 6px; left: 52px; right: auto; }
+.price-note .inline-link { min-height: 0; font-size: 13px; }

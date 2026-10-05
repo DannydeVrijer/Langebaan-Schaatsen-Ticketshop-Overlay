@@ -10,6 +10,7 @@ export const why: Record<string, { title: string; items: Why[] }> = {
   day: {
     title: 'Tickets kiezen (startpagina)',
     items: [
+      { t: 'Stap 1: eerst je dag kiezen', s: 'Zoals in de huidige shop begin je met de dag. Geen dag voorgeselecteerd: elke dag als duidelijke keuze met tijden en vanaf-prijs. Daarna pas de plekken.', bron: 'INF – kleine eerste stap · OI – keuzehulp' },
       { t: 'Direct tickets, geen programma voorop', s: 'Zoals een productpagina bij bol.com: je ziet meteen wat je kunt kopen en wat het kost. Programma, plattegrond en vragen staan achter een knop.', bron: 'bol.com – product en prijs eerst · DCS – één doel per pagina' },
       { t: 'Rust: één keer zeggen, niet overal', s: '"Inclusief servicekosten" en "kinderen t/m 5 gratis" staan één keer bovenaan in plaats van bij elke regel. Zekerheden (e-ticket, veilig betalen) staan rustig onder de lijst en in het mandje.', bron: 'bol.com – belofte herhalen · OI – afleiding verwijderen' },
       { t: '"Vanaf"-prijs per dag in de tabbladen', s: 'Prijs zichtbaar vóór je kiest, zoals bij varianten op bol.com.', bron: 'bol.com – prijs vooraf · DCS – value ladder' },

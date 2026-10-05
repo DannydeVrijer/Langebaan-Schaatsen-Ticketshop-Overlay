@@ -14,7 +14,7 @@ const segs: { key: DayKey; top: string; sub: string }[] = [
 ];
 
 export default function Day() {
-  const { day = 'vr' } = useParams();
+  const { day } = useParams();
   const nav = useNavigate();
   const shop = useShop();
   const [open, setOpen] = useState<Zone | null>(null);
@@ -41,6 +41,7 @@ export default function Day() {
     return null;
   }, [shop.lines, shop.qty, day]);
 
+  if (!day) return <DayPicker />;
   if (!segs.some((t) => t.key === day)) return <Navigate to="/" replace />;
   const d = day === 'pp' ? null : dayOf(day as DayKey)!;
 
@@ -73,7 +74,7 @@ export default function Day() {
 
   return (
     <main className="screen has-ab">
-      <ShopBar whyKey="day" />
+      <ShopBar back="/" whyKey="day" />
 
       <header className="ev-head">
         <h1 className="display">{event.name}</h1>
@@ -248,6 +249,71 @@ export default function Day() {
           ) : (
             <ul className="stack">{kidsRules.map((r) => <li key={r}><Icon name="users" size={16} /><span>{r}</span></li>)}</ul>
           )}
+        </Sheet>
+      )}
+    </main>
+  );
+}
+
+/** Stap 1: eerst de dag kiezen (zoals in de huidige shop), pas daarna de plekken. */
+function DayPicker() {
+  const shop = useShop();
+  const nav = useNavigate();
+  const [prog, setProg] = useState(false);
+  const ppSave = ppCompare('noord', 'volw');
+  const count = (k: DayKey) => shop.lines.filter((l) => l.kind === 'ticket' && l.item.day === k).reduce((s, l) => s + l.qty, 0);
+  return (
+    <main className={`screen ${shop.ticketCount ? 'has-ab' : ''}`}>
+      <ShopBar whyKey="day" />
+      <header className="ev-head">
+        <h1 className="display">{event.name}</h1>
+        <p className="ev-meta">{event.dates} · Thialf, Heerenveen</p>
+      </header>
+
+      <h2 className="pick-h">Welke dag kom je?</h2>
+      <div className="pick-list">
+        {days.map((x) => (
+          <Link key={x.key} to={`/tickets/${x.key}`} className="pick">
+            <span className="pick-date"><b>{x.date.split(' ')[0]}</b><i>{x.date.split(' ')[1]}</i></span>
+            <span className="pick-txt"><b>{x.name}</b><small>{x.time} · {x.races.length} afstanden</small></span>
+            <span className="zrow-price"><small>vanaf</small>{euro(minAdult(x.key))}</span>
+            {count(x.key) > 0 && <i className="dot-n">{count(x.key)}</i>}
+            <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
+          </Link>
+        ))}
+        <Link to="/tickets/pp" className="pick pp">
+          <span className="pick-date pp"><b>3</b><i>dagen</i></span>
+          <span className="pick-txt"><b>Alle 3 dagen</b><small>Passe-partout{ppSave ? ` · bespaar tot ${euro(ppSave.save)}` : ''}</small></span>
+          <span className="zrow-price"><small>vanaf</small>{euro(minAdult('pp'))}</span>
+          {count('pp') > 0 && <i className="dot-n">{count('pp')}</i>}
+          <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
+        </Link>
+      </div>
+
+      <p className="price-note">Prijzen per persoon, inclusief servicekosten. Kinderen t/m 5 jaar gratis. <button type="button" className="inline-link" onClick={() => setProg(true)}>Bekijk het programma</button></p>
+
+      <ul className="usp-quiet" aria-label="Zekerheden">
+        {usps.slice(0, 2).map((u) => <li key={u}><Icon name="check" size={14} /> {u}</li>)}
+      </ul>
+
+      <ProtoFooter />
+
+      {shop.ticketCount > 0 && (
+        <ActionBar note={<><b>{shop.ticketCount} {shop.ticketCount === 1 ? 'ticket' : 'tickets'}</b> · {euro(shop.total)}</>}>
+          <button type="button" className="btn btn-primary" onClick={() => nav('/parkeren')}>Verder <Icon name="chev" /></button>
+        </ActionBar>
+      )}
+
+      {prog && (
+        <Sheet title="Programma" eyebrow="Onder voorbehoud" onClose={() => setProg(false)}>
+          {days.map((x) => (
+            <section key={x.key} className="prog-day">
+              <h3><span>{x.long}</span><small>{x.time}</small></h3>
+              <ol className="race-list">{x.races.map((r) => <li key={r}>{r}</li>)}</ol>
+              <Link to={`/tickets/${x.key}`} className="inline-link">Kies {x.name.toLowerCase()}</Link>
+            </section>
+          ))}
+          <p className="small muted">{event.doorsNote}</p>
         </Sheet>
       )}
     </main>
