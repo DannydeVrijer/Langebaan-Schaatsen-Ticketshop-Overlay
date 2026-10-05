@@ -26,6 +26,9 @@ type Ctx = {
   /** demomodus: toont de 'Waarom?'-knoppen voor interne presentatie */
   demo: boolean;
   setDemo: (v: boolean) => void;
+  /** weergave: telefoon of desktop (auto = op schermbreedte) */
+  view: 'auto' | 'phone' | 'desktop';
+  setView: (v: 'auto' | 'phone' | 'desktop') => void;
 };
 
 const C = createContext<Ctx | null>(null);
@@ -39,6 +42,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [expired, setExpired] = useState<Record<string, number> | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [demo, setDemo] = useState(false);
+  const [view, setView] = useState<'auto' | 'phone' | 'desktop'>('auto');
 
   const empty = Object.keys(qty).length === 0;
 
@@ -83,9 +87,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       restore: () => { if (expired) { setNow(Date.now()); setStartedAt(null); setQtyMap(expired); setExpired(null); } },
       dismissExpired: () => setExpired(null),
       clear: () => setQtyMap({}),
-      order, setOrder, demo, setDemo,
+      order, setOrder, demo, setDemo, view, setView,
     };
-  }, [qty, setQty, remaining, expired, order, demo]);
+  }, [qty, setQty, remaining, expired, order, demo, view]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }

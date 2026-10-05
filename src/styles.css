@@ -757,3 +757,48 @@ details.faq summary { min-height: 44px; align-items: center; }
 .pick .chev { color: var(--text-faint); }
 .pick .dot-n { top: 6px; left: 52px; right: auto; }
 .price-note .inline-link { min-height: 0; font-size: 13px; }
+
+/* ---------- desktopweergave (.app.wide) ---------- */
+.day-aside { display: none; }
+.view-toggle { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; overflow: hidden; flex: none; }
+.view-toggle button { width: 40px; height: 40px; display: grid; place-items: center; color: var(--text-muted); }
+.view-toggle button[aria-pressed=true] { background: var(--white); color: var(--ink-900); }
+@media (max-width: 370px) { .view-toggle button { width: 34px; } }
+
+.app.wide { --max-w: 100%; max-width: none; margin: 0; border-radius: 0; min-height: 100dvh; box-shadow: none; }
+.app.wide .screen { max-width: 1200px; margin: 0 auto; padding: 0 40px 64px; }
+.app.wide .shopbar { margin: 0 -40px 8px; padding: 14px 40px; }
+.app.wide .shopbar-title { font-size: 18px; }
+.app.wide .ev-head { margin-top: 28px; }
+.app.wide .ev-head h1 { font-size: 44px; }
+.app.wide .ev-meta { font-size: 16px; }
+.app.wide .pick-h { font-size: 28px; margin: 36px 0 16px; }
+.app.wide .pick-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.app.wide .pick { flex-direction: column; align-items: flex-start; gap: 14px; min-height: 220px; padding: 22px; transition: border-color .15s, background .15s; }
+.app.wide .pick:hover { border-color: var(--white); background: var(--glass-2); }
+.app.wide .pick .zrow-price { text-align: left; margin-top: auto; font-size: 22px; }
+.app.wide .pick .chev { position: absolute; right: 18px; top: 26px; }
+.app.wide .pick .dot-n { left: 60px; top: 14px; }
+.app.wide .price-note, .app.wide .usp-quiet { font-size: 15px; }
+.app.wide .usp-quiet { flex-direction: row; gap: 28px; }
+.app.wide .seg-days { max-width: 620px; }
+.app.wide .day-grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
+.app.wide .day-aside { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 92px; margin-top: 18px; }
+.app.wide .zrow-head:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.aside-cart { margin-top: 10px; padding: 18px; border-radius: var(--radius); background: var(--ink-800); border: 1px solid var(--line-strong); display: flex; flex-direction: column; gap: 10px; }
+.aside-cart ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.aside-cart li { display: flex; justify-content: space-between; gap: 10px; font-variant-numeric: tabular-nums; }
+.aside-total { display: flex; justify-content: space-between; font-size: 18px; border-top: 1px solid var(--line); padding-top: 10px; font-variant-numeric: tabular-nums; }
+.app.wide .screen:has(.day-grid) .actionbar { display: none; }
+.app.wide .screen:has(.day-grid) { padding-bottom: 64px; }
+.app.wide .screen:not(:has(.day-grid)):not(:has(.pick-list)) { max-width: 820px; }
+.app.wide .screen.has-ab { padding-bottom: 48px; }
+.app.wide .actionbar { position: sticky; left: auto; transform: none; width: auto; margin: 28px -18px 0; border-radius: 18px; bottom: 12px; border: 1px solid var(--line-strong); }
+.app.wide .actionbar .ab-row { justify-content: flex-end; }
+.app.wide .actionbar .ab-row .btn { flex: 0 0 340px; }
+.app.wide .hero, .app.wide .done-hero { margin-inline: 0; }
+body.wide .sheet-wrap { align-items: center; }
+body.wide .sheet { max-width: 560px; border-radius: 24px; padding-bottom: 24px; }
+body.wide .grab { display: none; }
+@media (min-width: 560px) { body:not(.wide) .app { margin: 16px auto; } }
+.app.wide .shopbar { border-bottom: 0; box-shadow: 0 1px 0 var(--line), 0 0 0 100vmax rgba(11,21,38,.86); clip-path: inset(0 -100vmax -1px); }

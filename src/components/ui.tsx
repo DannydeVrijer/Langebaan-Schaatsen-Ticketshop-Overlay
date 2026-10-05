@@ -21,6 +21,8 @@ const I = {
   trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>,
   bulb: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>,
   shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4" strokeLinecap="round"/></svg>,
+  phone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2" strokeLinecap="round"/></svg>,
+  desktop: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4" strokeLinecap="round"/></svg>,
   share: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>,
 };
 export type IconName = keyof typeof I;
@@ -74,6 +76,7 @@ export function ShopBar({ back, title = 'WCKT 2026', whyKey }: { back?: string |
       )}
       <span className="shopbar-title">{title}</span>
       {whyKey && <WhyButton k={whyKey} />}
+      <ViewToggle />
       <Link to="/winkelmand" className={`cart-btn ${count ? 'has' : ''} ${low ? 'low' : ''}`} aria-label={`Winkelmand, ${count} items${remaining !== null ? `, nog ${mmss(remaining)} gereserveerd` : ''}`}>
         <Icon name="cart" size={22} />
         {count > 0 && <span className="count">{count}</span>}
@@ -181,4 +184,25 @@ export function ProtoFooter({ text = 'Fictief voorbeeld. Er wordt niets verkocht
       </label>
     </footer>
   );
+}
+
+/** Wissel tussen telefoon- en desktopweergave (prototype-hulpmiddel). */
+export function ViewToggle() {
+  const { view, setView } = useShop();
+  const wide = useWide();
+  return (
+    <div className="view-toggle" role="group" aria-label="Weergave">
+      <button type="button" aria-pressed={!wide} aria-label="Telefoonweergave" onClick={() => setView('phone')}><Icon name="phone" size={18} /></button>
+      <button type="button" aria-pressed={wide} aria-label="Desktopweergave" onClick={() => setView(view === 'desktop' ? 'auto' : 'desktop')}><Icon name="desktop" size={18} /></button>
+    </div>
+  );
+}
+
+export const DESKTOP_W = 1280;
+/** true als de desktopweergave actief is (gekozen, of automatisch op een breed scherm). */
+export function useWide() {
+  const { view } = useShop();
+  const [vw, setVw] = useState(() => window.innerWidth);
+  useEffect(() => { const r = () => setVw(window.innerWidth); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
+  return view === 'desktop' || (view === 'auto' && vw >= 1024);
 }

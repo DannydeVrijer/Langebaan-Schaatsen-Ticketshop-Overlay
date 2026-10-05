@@ -14,7 +14,9 @@ Fictief voorbeeld dat **dezelfde stappen volgt als de huidige Paylogic-shop**, m
 4. **Gegevens** – dezelfde velden als nu, gegroepeerd en met uitleg; postcode + huisnummer vult je adres; bescherming en opt-ins los en uit.
 5. **Betalen (simulatie)** → **Bedankt** met agenda, delen en één vervolgaanbod.
 
-Op elk scherm legt de knop **Waarom?** uit wat er anders is dan nu en welke marketingtechniek erachter zit. Zie ook **[VERBETERPUNTEN.md](VERBETERPUNTEN.md)**.
+Rechtsboven wissel je tussen **telefoon- en desktopweergave** (op een breed scherm automatisch desktop: dagen naast elkaar, plattegrond en mandje in een vaste zijkolom). Op een telefoon toont de desktopknop een verkleinde preview.
+
+In **demomodus** (schakelaar onderaan) legt de knop **Waarom?** uit wat er anders is dan nu en welke marketingtechniek erachter zit. Zie ook **[VERBETERPUNTEN.md](VERBETERPUNTEN.md)**.
 
 Producten, prijzen en programma komen uit de huidige shop (5 okt 2026). Beschikbaarheid, parkeerterreinen en quotes (magievanschaatsen.nl) zijn voorbeeld. Placeholders staan tussen `[ ]`.
 

@@ -104,6 +104,8 @@ export default function Day() {
 
       <p className="price-note">Prijzen per persoon, inclusief servicekosten. Kinderen t/m 5 jaar gratis.</p>
 
+      <div className="day-grid">
+      <div className="day-col">
       <div className="zone-list">
         {groups.filter((g) => zones.some((z) => zoneInfo[z].group === g.key)).map((g) => (
           <section key={g.key} aria-label={g.label}>
@@ -167,6 +169,24 @@ export default function Day() {
           }}>Omzetten</button>
         </aside>
       )}
+      </div>
+      <aside className="day-aside" aria-label="Plattegrond en je mandje">
+        <div className="map-card"><ThialfMap available={available} selected={open} onSelect={jump} label="Tik op een vak om het te kiezen" /></div>
+        <p className="map-hint">Klik op een vak om het te kiezen. Oost is de finishzijde.</p>
+        <div className="aside-cart">
+          <h2 className="list-h">Je mandje</h2>
+          {shop.lines.length === 0 ? <p className="small muted">Nog leeg. Kies een vak en klik op +.</p> : (
+            <ul>
+              {shop.lines.map((l) => (
+                <li key={l.item.id}><span>{l.qty}× {l.kind === 'ticket' ? `${zoneInfo[l.item.zone].title} · ${l.item.day === 'pp' ? 'alle dagen' : dayOf(l.item.day)!.name.toLowerCase()}` : `Parkeren ${l.item.lot}`}</span><b>{euro(l.item.price * l.qty)}</b></li>
+              ))}
+            </ul>
+          )}
+          <div className="aside-total"><span>Totaal</span><b>{euro(shop.total)}</b></div>
+          <button type="button" className="btn btn-primary" disabled={!shop.ticketCount} onClick={() => nav('/parkeren')}>{shop.ticketCount ? <>Verder <Icon name="chev" /></> : 'Kies je plek'}</button>
+        </div>
+      </aside>
+      </div>
 
       <ul className="usp-quiet" aria-label="Zekerheden">
         {usps.slice(0, 2).map((u) => <li key={u}><Icon name="check" size={14} /> {u}</li>)}
