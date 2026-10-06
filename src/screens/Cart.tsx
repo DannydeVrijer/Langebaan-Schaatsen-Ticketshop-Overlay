@@ -1,3 +1,4 @@
+import { Price } from '../components/Price';
 import { Link, useNavigate } from 'react-router-dom';
 import { audienceLabel, dayLabel, dayOf, euro, faq, ppCompare, usps, zoneInfo, type DayKey } from '../data/event';
 import { ActionBar, Icon, ShopBar, StepBar, Stepper } from '../components/ui';
@@ -72,7 +73,7 @@ export default function Cart() {
                   <span className="pr-fee">{sub(l)} · {euro(l.item.price)}</span>
                 </div>
                 <div className="cl-right">
-                  <span className="cl-sum">{euro(l.item.price * l.qty)}</span>
+                  <span className="cl-sum"><Price v={l.item.price * l.qty} /></span>
                   <Stepper value={l.qty} max={l.kind === 'ticket' ? l.item.max : 4} onChange={(n) => shop.setQty(l.item.id, n)} label={title(l)} />
                 </div>
               </li>
@@ -83,10 +84,10 @@ export default function Cart() {
       ))}
 
       <section className="totals-card">
-        <div><span>{shop.lines.some((l) => l.kind === 'parking') ? 'Tickets en parkeren' : 'Tickets'}</span><span>{euro(shop.total)}</span></div>
-        <div className="sub"><span>Waarvan servicekosten</span><span>{euro(shop.fees)}</span></div>
-        <div className="grand"><span>Totaal</span><span>{euro(shop.total)}</span></div>
-        {saved > 0 && <div className="saved"><span>Je bespaart met je passe-partout</span><span>{euro(saved)}</span></div>}
+        <div><span>{shop.lines.some((l) => l.kind === 'parking') ? 'Tickets en parkeren' : 'Tickets'}</span><span><Price v={shop.total} /></span></div>
+        <div className="sub"><span>Waarvan servicekosten</span><span><Price v={shop.fees} /></span></div>
+        <div className="grand"><span>Totaal</span><span><Price v={shop.total} /></span></div>
+        {saved > 0 && <div className="saved"><span>Je bespaart met je passe-partout</span><span><Price v={saved} /></span></div>}
         <p className="no-extra">Geen extra kosten bij het betalen.</p>
       </section>
 
@@ -99,7 +100,7 @@ export default function Cart() {
         {faq.slice(0, 3).map((f) => <details key={f.q} className="faq"><summary>{f.q}</summary><p>{f.a}</p></details>)}
       </section>
 
-      <ActionBar note={<><b>Totaal {euro(shop.total)}</b> · {shop.count} items</>}>
+      <ActionBar note={<><b>Totaal {euro(shop.total)}</b> · {shop.count} {shop.count === 1 ? 'item' : 'items'}</>}>
         <button type="button" className="btn btn-primary" onClick={() => nav('/gegevens')}>Verder naar bestellen <Icon name="chev" /></button>
       </ActionBar>
     </main>

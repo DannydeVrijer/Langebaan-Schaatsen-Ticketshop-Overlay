@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { audienceLabel, dayOf, days, euro, event, faq, groups, kidsRules, parking, ppCompare, products, quotes, usps, vipStack, zoneInfo, type DayKey, type Product, type Zone } from '../data/event';
 import { ThialfMap } from '../components/ThialfMap';
 import { ActionBar, Icon, ProtoFooter, Sheet, ShopBar, Stepper } from '../components/ui';
+import { Price } from '../components/Price';
 import { useShop } from '../state';
 import { asset } from '../asset';
 
@@ -91,7 +92,7 @@ export default function Day() {
           const n = shop.lines.filter((l) => l.kind === 'ticket' && l.item.day === t.key).reduce((s, l) => s + l.qty, 0);
           return (
             <Link key={t.key} to={`/tickets/${t.key}`} replace role="tab" aria-selected={t.key === day} className={t.key === day ? 'on' : ''} onClick={() => setOpen(null)}>
-              <b>{t.top}</b><span>{t.sub}</span><small>{euro(minAdult(t.key)).replace(',00', '')}</small>
+              <b>{t.top}</b><span>{t.sub}</span><small>{euro(minAdult(t.key))}</small>
               {n > 0 && <i className="dot-n" aria-label={`${n} gekozen`}>{n}</i>}
             </Link>
           );
@@ -126,7 +127,7 @@ export default function Day() {
                       <small>{allOut ? 'Uitverkocht op deze dag' : zi.short}</small>
                     </span>
                     <span className="zrow-price">
-                      {allOut ? '' : <><small>vanaf</small>{euro(minOf(ps))}</>}
+                      {allOut ? '' : <><small>vanaf</small><Price v={minOf(ps)} /></>}
                     </span>
                     {inCart > 0 && <i className="dot-n" aria-label={`${inCart} in je mandje`}>{inCart}</i>}
                     {!allOut && <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>}
@@ -139,7 +140,7 @@ export default function Day() {
                           <div key={p.id} className={`aud ${p.soldOut ? 'sold' : ''}`}>
                             <span className="aud-l">
                               <span>{audienceLabel[p.audience]}</span>
-                              <b>{cmp && <s className="was">{euro(cmp.los)}</s>} {euro(p.price)}</b>
+                              <b>{cmp && <s className="was">{euro(cmp.los)}</s>} <Price v={p.price} /></b>
                             </span>
                             {p.soldOut ? <span className="sold-lbl">Uitverkocht</span>
                               : <Stepper value={shop.qty[p.id] ?? 0} max={p.max} onChange={(n) => change(p, n)} label={`${zi.title}, ${audienceLabel[p.audience]}`} />}
@@ -179,11 +180,11 @@ export default function Day() {
           {shop.lines.length === 0 ? <p className="small muted">Nog leeg. Kies een vak en klik op +.</p> : (
             <ul>
               {shop.lines.map((l) => (
-                <li key={l.item.id}><span>{l.qty}× {l.kind === 'ticket' ? `${zoneInfo[l.item.zone].title} · ${l.item.day === 'pp' ? 'alle dagen' : dayOf(l.item.day)!.name.toLowerCase()}` : `Parkeren ${l.item.lot}`}</span><b>{euro(l.item.price * l.qty)}</b></li>
+                <li key={l.item.id}><span>{l.qty}× {l.kind === 'ticket' ? `${zoneInfo[l.item.zone].title} · ${l.item.day === 'pp' ? 'alle dagen' : dayOf(l.item.day)!.name.toLowerCase()}` : `Parkeren ${l.item.lot}`}</span><b><Price v={l.item.price * l.qty} /></b></li>
               ))}
             </ul>
           )}
-          <div className="aside-total"><span>Totaal</span><b>{euro(shop.total)}</b></div>
+          <div className="aside-total"><span>Totaal</span><b><Price v={shop.total} /></b></div>
           <button type="button" className="btn btn-primary" disabled={!shop.ticketCount} onClick={() => nav('/parkeren')}>{shop.ticketCount ? <>Verder <Icon name="chev" /></> : 'Kies je plek'}</button>
         </div>
       </aside>
@@ -212,17 +213,17 @@ export default function Day() {
           <div className="added-item">
             <span className="ok-dot"><Icon name="check" size={18} /></span>
             <span><b>{zoneInfo[added.zone].title}</b><small>{added.day === 'pp' ? 'Alle 3 dagen' : dayOf(added.day)!.long} · {audienceLabel[added.audience]}</small></span>
-            <b className="num">{euro(added.price)}</b>
+            <b className="num"><Price v={added.price} /></b>
           </div>
           {ppUpgrade && (
-            <p className="upgrade">Kom je vaker? Alle 3 dagen voor <b>{euro(ppUpgrade.pp)}</b> <s>{euro(ppUpgrade.los)}</s>. <Link to="/tickets/pp" replace className="inline-link" onClick={() => { setAdded(null); setOpen(null); }}>Bekijk</Link></p>
+            <p className="upgrade">Kom je vaker? Alle 3 dagen voor <b><Price v={ppUpgrade.pp} /></b> <s>{euro(ppUpgrade.los)}</s>. <Link to="/tickets/pp" replace className="inline-link" onClick={() => { setAdded(null); setOpen(null); }}>Bekijk</Link></p>
           )}
           {suggestions(added).length > 0 && (
             <>
               <h3 className="list-h">Handig erbij</h3>
               {suggestions(added).map((s) => (
                 <div key={s.id} className="aud">
-                  <span className="aud-l"><span>{s.t} · {s.s}</span><b>{euro(s.price)}</b></span>
+                  <span className="aud-l"><span>{s.t} · {s.s}</span><b><Price v={s.price} /></b></span>
                   <Stepper value={shop.qty[s.id] ?? 0} max={s.max} onChange={(n) => shop.setQty(s.id, n)} label={s.t} />
                 </div>
               ))}
@@ -304,7 +305,7 @@ function DayPicker() {
           <Link key={x.key} to={`/tickets/${x.key}`} className="pick">
             <span className="pick-date"><b>{x.date.split(' ')[0]}</b><i>{x.date.split(' ')[1]}</i></span>
             <span className="pick-txt"><b>{x.name}</b><small>{x.time} · {x.races.length} afstanden</small></span>
-            <span className="zrow-price"><small>vanaf</small>{euro(minAdult(x.key))}</span>
+            <span className="zrow-price"><small>vanaf</small><Price v={minAdult(x.key)} /></span>
             {count(x.key) > 0 && <i className="dot-n">{count(x.key)}</i>}
             <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
           </Link>
@@ -312,7 +313,7 @@ function DayPicker() {
         <Link to="/tickets/pp" className="pick pp">
           <span className="pick-date pp"><b>3</b><i>dagen</i></span>
           <span className="pick-txt"><b>Alle 3 dagen</b><small>Passe-partout{ppSave ? ` · bespaar tot ${euro(ppSave.save)}` : ''}</small></span>
-          <span className="zrow-price"><small>vanaf</small>{euro(minAdult('pp'))}</span>
+          <span className="zrow-price"><small>vanaf</small><Price v={minAdult('pp')} /></span>
           {count('pp') > 0 && <i className="dot-n">{count('pp')}</i>}
           <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
         </Link>

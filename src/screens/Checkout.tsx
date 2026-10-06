@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { audienceLabel, euro, paymentMethods, zoneInfo, dayOf } from '../data/event';
 import { ActionBar, Icon, ShopBar, StepBar } from '../components/ui';
+import { Price } from '../components/Price';
 import { useShop } from '../state';
 
 type F = {
@@ -84,7 +85,7 @@ export default function Checkout() {
 
       <section className={`sum-card ${openSum ? 'open' : ''}`}>
         <button type="button" className="sum-toggle" aria-expanded={openSum} onClick={() => setOpenSum((v) => !v)}>
-          <span>Je bestelling ({shop.count})</span><b>{euro(total)}</b><Icon name="chev" size={16} />
+          <span>Je bestelling ({shop.count})</span><b><Price v={total} /></b><Icon name="chev" size={16} />
         </button>
         {openSum && (
           <ul className="sum-lines">

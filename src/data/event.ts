@@ -127,7 +127,12 @@ export const paymentMethods = [
 
 export const RESERVATION_MIN = 20;
 
-export const euro = (n: number) => n.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
+/** Prijs als tekst zoals bol.com: geen €-teken; hele euro's als "25,-", anders "12,50". */
+export const euro = (n: number) => {
+  const c = Math.round(n * 100);
+  const whole = Math.trunc(c / 100).toLocaleString('nl-NL');
+  return c % 100 === 0 ? `${whole},-` : `${whole},${String(Math.abs(c % 100)).padStart(2, '0')}`;
+};
 export const dayOf = (k: DayKey) => days.find((d) => d.key === k);
 export const productTitle = (p: Product) => zoneInfo[p.zone].title;
 export const dayLabel = (k: DayKey) => (k === 'pp' ? 'Passe-partout · alle 3 dagen' : dayOf(k)!.long);
@@ -141,7 +146,7 @@ export const faq = [
   { q: 'Kan ik mijn ticket doorverkopen of overdragen?', a: '[beleid doorverkoop/overdracht aanleveren]' },
   { q: 'Moet mijn kind een ticket hebben?', a: 'Kinderen t/m 5 jaar hebben gratis toegang. Van 6 t/m 12 jaar koop je een kindticket, vanaf 13 jaar een regulier ticket.' },
   { q: 'Hoe laat moet ik er zijn?', a: 'Thialf is 1,5 uur voor de eerste start open. Kom op tijd, zeker op zaterdag en zondag.' },
-  { q: 'Wat als ik niet kan komen?', a: 'Met annuleringsbescherming (+€ 2,00 bij afrekenen) krijg je tot 100% terug bij o.a. ziekte of OV-vertraging. Voorwaarden van XCover.' },
+  { q: 'Wat als ik niet kan komen?', a: 'Met annuleringsbescherming (+2,- bij afrekenen) krijg je tot 100% terug bij o.a. ziekte of OV-vertraging. Voorwaarden van XCover.' },
 ];
 
 /** Wat de losse dagen samen kosten t.o.v. de passe-partout (echte rekensom). */

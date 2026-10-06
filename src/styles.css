@@ -820,3 +820,7 @@ body.wide .grab { display: none; }
 .app.wide .ph-body h1 { font-size: 52px; }
 .app.wide .ph-body p { font-size: 18px; }
 .app.wide .pick-hero + .pick-h { margin-top: 8px; }
+
+/* ---------- prijzen zoals bol.com: geen €, centen verhoogd ---------- */
+.price { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price sup { font-size: .6em; vertical-align: .55em; line-height: 0; margin-left: 1px; font-weight: inherit; }
