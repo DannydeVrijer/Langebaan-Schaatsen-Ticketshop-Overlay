@@ -4,6 +4,7 @@ import { audienceLabel, dayOf, days, euro, event, faq, groups, kidsRules, parkin
 import { ThialfMap } from '../components/ThialfMap';
 import { ActionBar, Icon, ProtoFooter, Sheet, ShopBar, Stepper } from '../components/ui';
 import { useShop } from '../state';
+import { asset } from '../asset';
 
 const minAdult = (k: DayKey) => Math.min(...products.filter((p) => p.day === k && !p.soldOut && p.audience === 'volw').map((p) => p.price));
 const minOf = (ps: Product[]) => { const a = ps.filter((p) => !p.soldOut); const v = a.filter((p) => p.audience !== 'kids'); return Math.min(...(v.length ? v : a).map((p) => p.price)); };
@@ -285,10 +286,17 @@ function DayPicker() {
   return (
     <main className={`screen ${shop.ticketCount ? 'has-ab' : ''}`}>
       <ShopBar whyKey="day" />
-      <header className="ev-head">
-        <h1 className="display">{event.name}</h1>
-        <p className="ev-meta">{event.dates} · Thialf, Heerenveen</p>
-      </header>
+      <section className="pick-hero">
+        <picture>
+          <source media="(min-width: 900px)" srcSet={asset('img/hero-wide.jpg')} />
+          <img src={asset('img/hero.jpg')} alt="Langebaanschaatser in actie" />
+        </picture>
+        <div className="ph-body">
+          <span className="eyebrow">{event.dates} · Thialf, Heerenveen</span>
+          <h1 className="display">{event.name}</h1>
+          <p>{event.stakes}</p>
+        </div>
+      </section>
 
       <h2 className="pick-h">Welke dag kom je?</h2>
       <div className="pick-list">
