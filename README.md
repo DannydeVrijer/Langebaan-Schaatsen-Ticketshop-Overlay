@@ -34,7 +34,7 @@ Online via GitHub Pages: `https://dannydevrijer.github.io/Langebaan-Schaatsen-Ti
 
 ## Naar een echte koppeling
 
-Zie **[ARCHITECTUUR.md](ARCHITECTUUR.md)**: wat bij jullie draait, wat bij Paylogic blijft, wat er nog gebouwd moet worden en de risico's.
+Zie **[KOPPELING.md](KOPPELING.md)** (stappenplan + `src/api/paylogic.ts`) en **[ARCHITECTUUR.md](ARCHITECTUUR.md)**: wat bij jullie draait, wat bij Paylogic blijft, wat er nog gebouwd moet worden en de risico's.
 
 ## Structuur
 
