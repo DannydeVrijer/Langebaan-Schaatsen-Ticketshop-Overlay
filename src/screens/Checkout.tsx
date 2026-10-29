@@ -1,9 +1,14 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { audienceLabel, euro, paymentMethods, zoneInfo, dayOf } from '../data/event';
 import { ActionBar, Icon, ShopBar, StepBar } from '../components/ui';
 import { Price } from '../components/Price';
 import { useShop } from '../state';
+import { useCatalog } from '../catalog';
+import { createOrder, friendly, getBill, rememberOrder, type ApiBill } from '../api/paylogic';
+
+type PM = { id: string; name: string; required: string[]; costs: number };
+const mockPM: PM[] = paymentMethods.map((p) => ({ id: p.id, name: p.name, required: [], costs: 0 }));
 
 type F = {
   first: string; last: string; email: string; phone: string;
@@ -22,11 +27,37 @@ export default function Checkout() {
   const [tried, setTried] = useState(false);
   const [openSum, setOpenSum] = useState(false);
   const [manual, setManual] = useState(false);
+  const { live } = useCatalog();
+  const [pms, setPms] = useState<PM[]>(live ? [] : mockPM);
+  const [bill, setBill] = useState<ApiBill | null>(null);
+  const [apiErr, setApiErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Live: betaalmethodes + verplichte velden komen uit de bill van Paylogic (per land).
+  const key = shop.lines.map((l) => `${l.item.id}:${l.qty}`).join(',') + '|' + f.country + '|' + f.pay;
+  useEffect(() => {
+    if (!live || !shop.lines.length) return;
+    let alive = true;
+    getBill(shop.lines.map((l) => ({ id: l.item.id, qty: l.qty })), f.country, f.pay || undefined)
+      .then((b) => {
+        if (!alive) return;
+        setBill(b);
+        setPms(b.available_payment_methods.map((m) => ({ id: m.uid, name: m.name.nl ?? m.name.en ?? m.uid, required: m.required_consumer_fields ?? [], costs: Number(m.costs?.amount ?? 0) })));
+        setApiErr(null);
+      })
+      .catch((e) => alive && setApiErr(friendly(e)));
+    return () => { alive = false; };
+  }, [key, live]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!shop.count) return <Navigate to="/winkelmand" replace />;
 
   const set = <K extends keyof F>(k: K, v: F[K]) => setF((x) => ({ ...x, [k]: v }));
-  const total = shop.total + (f.protect === 'ja' ? PROTECT : 0);
+  const chosen = pms.find((p) => p.id === f.pay);
+  // Welke velden zijn verplicht? Live: wat de betaalmethode vraagt (+ naam/e-mail altijd). Voorbeeld: alles, zoals de huidige shop.
+  const need = (field: string) => !live || !chosen || chosen.required.includes(field);
+  const needDob = need('date_of_birth'), needGender = need('gender'), needAddr = need('address') || need('postal_code') || need('city');
+  const liveTotal = bill ? Number((bill.grand_total ?? bill.total).amount) : null;
+  const total = (liveTotal ?? shop.total) + (!live && f.protect === 'ja' ? PROTECT : 0);
 
   const birthOk = (() => {
     const d = +f.dd, m = +f.mm, y = +f.yyyy;
@@ -37,27 +68,27 @@ export default function Checkout() {
 
   // bol.com-patroon: in NL alleen postcode + huisnummer, adres wordt opgezocht (hier gesimuleerd)
   const zipOk = /^\d{4}\s?[A-Z]{2}$/.test(f.zip.trim());
-  const nlAuto = f.country === 'NL' && !manual;
+  const nlAuto = f.country === 'NL' && !manual && !live; // live: geen gesimuleerde postcode-check, dus zelf invullen
   const found = nlAuto && zipOk && f.nr.trim();
 
   const err: Partial<Record<keyof F, string>> = {
     first: f.first.trim() ? '' : 'Vul je voornaam in.',
     last: f.last.trim() ? '' : 'Vul je achternaam in.',
     email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email) ? '' : 'Vul een geldig e-mailadres in, bijv. naam@voorbeeld.nl.',
-    dd: birthOk ? '' : 'Vul een geldige geboortedatum in (dag, maand, jaar).',
-    gender: f.gender ? '' : 'Kies een optie.',
-    zip: (nlAuto ? zipOk : f.zip.trim()) ? '' : 'Vul je postcode in, bijv. 8443 DZ.',
-    nr: f.nr.trim() ? '' : 'Vul je huisnummer in.',
-    street: nlAuto || f.street.trim() ? '' : 'Vul je straatnaam in.',
-    city: nlAuto || f.city.trim() ? '' : 'Vul je woonplaats in.',
+    dd: !needDob || birthOk ? '' : 'Vul een geldige geboortedatum in (dag, maand, jaar).',
+    gender: !needGender || f.gender ? '' : 'Kies een optie.',
+    zip: !needAddr || (nlAuto ? zipOk : f.zip.trim()) ? '' : 'Vul je postcode in, bijv. 8443 DZ.',
+    nr: !needAddr || f.nr.trim() ? '' : 'Vul je huisnummer in.',
+    street: !needAddr || nlAuto || f.street.trim() ? '' : 'Vul je straatnaam in.',
+    city: !needAddr || nlAuto || f.city.trim() ? '' : 'Vul je woonplaats in.',
     pay: f.pay ? '' : 'Kies hoe je wilt betalen.',
-    protect: f.protect ? '' : 'Kies of je annuleringsbescherming wilt.',
+    protect: live || f.protect ? '' : 'Kies of je annuleringsbescherming wilt.',
   };
   const errors = Object.entries(err).filter(([, v]) => v);
   const show = (k: keyof F) => (tried && err[k] ? <span className="field-err" id={`e-${k}`}>{err[k]}</span> : null);
   const inv = (k: keyof F) => ({ 'aria-invalid': tried && !!err[k], 'aria-describedby': tried && err[k] ? `e-${k}` : undefined });
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setTried(true);
     if (errors.length) {
@@ -65,12 +96,36 @@ export default function Checkout() {
       setTimeout(() => document.getElementById(`f-${first}`)?.focus(), 0);
       return;
     }
-    shop.setOrder({
-      id: 'WCKT-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
-      lines: shop.lines, total, fees: shop.fees, email: f.email, firstName: f.first.trim(),
-      protection: f.protect === 'ja', method: paymentMethods.find((p) => p.id === f.pay)!.name,
-    });
-    nav('/betalen');
+    const method = chosen?.name ?? f.pay;
+    if (!live) {
+      shop.setOrder({ id: 'WCKT-' + Math.random().toString(36).slice(2, 8).toUpperCase(), lines: shop.lines, total, fees: shop.fees, email: f.email, firstName: f.first.trim(), protection: f.protect === 'ja', method });
+      nav('/betalen');
+      return;
+    }
+    // Live: order aanmaken bij Paylogic en de koper naar de betaalpagina sturen.
+    setBusy(true); setApiErr(null);
+    try {
+      const genderMap: Record<string, 0 | 1 | 2 | 9> = { Man: 1, Vrouw: 2, Anders: 9, 'Zeg ik liever niet': 0 };
+      const order = await createOrder({
+        lines: shop.lines.map((l) => ({ id: l.item.id, qty: l.qty })),
+        consumer: {
+          first_name: f.first.trim(), last_name: f.last.trim(), email: f.email.trim(), country: f.country,
+          ...(needDob && birthOk ? { date_of_birth: `${f.yyyy}-${f.mm.padStart(2, '0')}-${f.dd.padStart(2, '0')}` } : {}),
+          ...(needGender && f.gender ? { gender: genderMap[f.gender] } : {}),
+          ...(needAddr ? { address: nlAuto ? `[straat] ${f.nr}`.trim() : `${f.street} ${f.nr}`.trim(), postal_code: f.zip.trim(), city: nlAuto ? '[plaats]' : f.city.trim() } : {}),
+        },
+        paymentMethod: f.pay,
+        optIn: f.optKnsb || f.optHos,
+        redirectUrl: `${location.origin}${location.pathname}#/bedankt`,
+      });
+      rememberOrder(order.uid);
+      shop.setOrder({ id: order.uid, lines: shop.lines, total: Number(order.grand_total?.amount ?? total), fees: shop.fees, email: f.email, firstName: f.first.trim(), protection: false, method, paymentUrl: order._links.payment?.href });
+      if (order._links.payment?.href) window.location.assign(order._links.payment.href);
+      else nav('/bedankt', { replace: true }); // gratis order: geen betaling nodig
+    } catch (err) {
+      setApiErr(friendly(err));
+      setBusy(false);
+    }
   }
 
   return (
@@ -121,9 +176,14 @@ export default function Checkout() {
           </label>
         </fieldset>
 
+        {apiErr && <p className="alert" role="alert">{apiErr}</p>}
+
         <fieldset>
-          <legend><span className="n">2</span> Een paar vragen van de organisatie</legend>
-          <p className="why block">De KNSB en House of Sports gebruiken dit om bezoekers beter te leren kennen. [doel bevestigen + privacyverklaring linken]</p>
+          <legend><span className="n">2</span> {live ? 'Gegevens voor je betaling' : 'Een paar vragen van de organisatie'}</legend>
+          {live
+            ? <p className="why block">{chosen ? `${chosen.name} vraagt om deze gegevens.` : 'Kies hieronder eerst je betaalmethode; dan zie je welke gegevens nodig zijn.'}</p>
+            : <p className="why block">De KNSB en House of Sports gebruiken dit om bezoekers beter te leren kennen. [doel bevestigen + privacyverklaring linken]</p>}
+          {needDob && <>
           <div className="lbl">Geboortedatum</div>
           <div className="dob" role="group" aria-label="Geboortedatum">
             <input id="f-dd" inputMode="numeric" maxLength={2} placeholder="DD" aria-label="Dag" value={f.dd} onChange={(e) => set('dd', e.target.value.replace(/\D/g, ''))} {...inv('dd')} />
@@ -131,6 +191,8 @@ export default function Checkout() {
             <input inputMode="numeric" maxLength={4} placeholder="JJJJ" aria-label="Jaar" autoComplete="bday-year" value={f.yyyy} onChange={(e) => set('yyyy', e.target.value.replace(/\D/g, ''))} {...inv('dd')} />
           </div>
           {show('dd')}
+          </>}
+          {needGender && <>
           <div className="lbl" id="g-lbl">Geslacht</div>
           <div className="seg" role="radiogroup" aria-labelledby="g-lbl" id="f-gender" tabIndex={-1}>
             {['Man', 'Vrouw', 'Anders', 'Zeg ik liever niet'].map((g) => (
@@ -138,12 +200,14 @@ export default function Checkout() {
             ))}
           </div>
           {show('gender')}
+          </>}
           <label>Land
             <select autoComplete="country" value={f.country} onChange={(e) => set('country', e.target.value)}>
               <optgroup label="Meest gekozen"><option value="NL">Nederland</option><option value="BE">België</option><option value="DE">Duitsland</option><option value="NO">Noorwegen</option></optgroup>
               <optgroup label="Overige landen"><option value="AT">Oostenrijk</option><option value="CA">Canada</option><option value="CN">China</option><option value="JP">Japan</option><option value="PL">Polen</option><option value="US">Verenigde Staten</option><option value="XX">Ander land</option></optgroup>
             </select>
           </label>
+          {needAddr && <>
           <div className="grid-2 zip">
             <label>Postcode<input id="f-zip" autoComplete="postal-code" value={f.zip} placeholder={f.country === 'NL' ? '1234 AB' : ''} onChange={(e) => set('zip', e.target.value.toUpperCase())} {...inv('zip')} />{show('zip')}</label>
             <label>Huisnummer<input id="f-nr" inputMode={nlAuto ? 'numeric' : 'text'} autoComplete="address-line2" value={f.nr} onChange={(e) => set('nr', e.target.value)} {...inv('nr')} />{show('nr')}</label>
@@ -161,14 +225,16 @@ export default function Checkout() {
               <label>Woonplaats<input id="f-city" autoComplete="address-level2" value={f.city} onChange={(e) => set('city', e.target.value)} {...inv('city')} />{show('city')}</label>
             </>
           )}
+          </>}
         </fieldset>
 
         <fieldset>
           <legend><span className="n">3</span> Hoe wil je betalen?</legend>
           <div className="pay-grid" role="radiogroup" aria-label="Betaalmethode" id="f-pay" tabIndex={-1}>
-            {paymentMethods.map((p) => (
+            {pms.length === 0 && live && <p className="why block">Betaalmethodes ophalen…</p>}
+            {pms.map((p) => (
               <button key={p.id} type="button" role="radio" aria-checked={f.pay === p.id} className={`pay ${f.pay === p.id ? 'on' : ''}`} onClick={() => set('pay', p.id)}>
-                <span className="radio" aria-hidden />{p.name}{p.id === 'ideal' && <small className="pm-tag">Meest gebruikt in NL</small>}
+                <span className="radio" aria-hidden />{p.name}{/ideal/i.test(p.name) && <small className="pm-tag">Meest gebruikt in NL</small>}{p.costs > 0 && <small className="pm-tag">+ {euro(p.costs)}</small>}
               </button>
             ))}
           </div>
@@ -176,7 +242,7 @@ export default function Checkout() {
           <p className="why block"><Icon name="ticket" size={14} /> Verzending: e-tickets per mail, direct na betalen.</p>
         </fieldset>
 
-        <fieldset>
+        {!live && <fieldset>
           <legend><span className="n">4</span> Annuleringsbescherming</legend>
           <p className="why block">Kun je onverwacht niet? Dan krijg je tot 100% van je ticketprijs terug, bijvoorbeeld bij ziekte, letsel of vertraging in het OV. Afgehandeld door XCover. [voorwaarden linken]</p>
           <div className="choice" role="radiogroup" aria-label="Annuleringsbescherming" id="f-protect" tabIndex={-1}>
@@ -188,10 +254,10 @@ export default function Checkout() {
             </button>
           </div>
           {show('protect')}
-        </fieldset>
+        </fieldset>}
 
         <fieldset>
-          <legend><span className="n">5</span> Op de hoogte blijven? <i className="opt">optioneel</i></legend>
+          <legend><span className="n">{live ? 4 : 5}</span> Op de hoogte blijven? <i className="opt">optioneel</i></legend>
           <label className="check"><input type="checkbox" checked={f.optKnsb} onChange={(e) => set('optKnsb', e.target.checked)} /><span><b>Als eerste horen wanneer de kaartverkoop start</b>, plus schaatsnieuws en acties van schaatsen.nl.</span></label>
           <label className="check"><input type="checkbox" checked={f.optHos} onChange={(e) => set('optHos', e.target.checked)} /><span><b>Updates over evenementen en promoties</b> van House of Sports, eventpartner van de KNSB.</span></label>
           <label className="check"><input type="checkbox" checked={f.optWa} onChange={(e) => set('optWa', e.target.checked)} /><span><b>Via WhatsApp</b> berichten ontvangen van House of Sports.</span></label>
@@ -200,8 +266,8 @@ export default function Checkout() {
 
         <p className="terms">Door op "Betaal" te tikken ga je akkoord met de algemene voorwaarden van de ticketpartner en House of Sports Events en bevestig je dat je 18 jaar of ouder bent. [links naar voorwaarden en privacybeleid]</p>
 
-        <ActionBar note={<><Icon name="lock" size={14} /> Veilig betalen{f.pay ? ` met ${paymentMethods.find((p) => p.id === f.pay)!.name}` : ''}</>}>
-          <button type="submit" className="btn btn-primary">Betaal <span className="num">{euro(total)}</span></button>
+        <ActionBar note={apiErr ? <span className="ab-err" role="alert">{apiErr}</span> : <><Icon name="lock" size={14} /> Veilig betalen{chosen ? ` met ${chosen.name}` : ''}{live ? ' via Paylogic' : ''}</>}>
+          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Even geduld…' : <>Betaal <span className="num">{euro(total)}</span></>}</button>
         </ActionBar>
       </form>
     </main>

@@ -149,7 +149,7 @@ export const faq = [
   { q: 'Wat als ik niet kan komen?', a: 'Met annuleringsbescherming (+2,- bij afrekenen) krijg je tot 100% terug bij o.a. ziekte of OV-vertraging. Voorwaarden van XCover.' },
 ];
 
-/** Wat de losse dagen samen kosten t.o.v. de passe-partout (echte rekensom). */
+/** @deprecated gebruik useCatalog().ppCompare (werkt ook met live data). */
 export const ppCompare = (zone: Zone, audience: Audience) => {
   const pp = products.find((p) => p.day === 'pp' && p.zone === zone && p.audience === audience);
   const los = products.filter((p) => p.day !== 'pp' && p.zone === zone && p.audience === audience).reduce((s, p) => s + p.price, 0);

@@ -8,7 +8,7 @@
  *
  * Instellen:  VITE_PAYLOGIC_TOKEN=<jwt>  VITE_PAYLOGIC_EVENT=<event-uid>  (en optioneel VITE_PAYLOGIC_API voor sandbox)
  */
-import type { Audience, DayKey, Product, Zone } from '../data/event';
+import type { Audience, DayKey, ParkingProduct, Product, Zone } from '../data/event';
 
 const API = import.meta.env.VITE_PAYLOGIC_API ?? 'https://shopping-api.paylogic.com';
 const TOKEN = import.meta.env.VITE_PAYLOGIC_TOKEN as string | undefined;
@@ -88,28 +88,50 @@ export const getStorefront = (eventUid = EVENT_UID!, country = 'NL') =>
  * product-uid uit de backoffice → dag/vak/doelgroep in de shop. Vul deze tabel per toernooi
  * (uid's staan in de backoffice bij elk product, of in de storefront-respons).
  */
-export type ProductMeta = { day: DayKey; zone: Zone; audience: Audience };
+export type ProductMeta =
+  | { kind?: 'ticket'; day: DayKey; zone: Zone; audience: Audience; limited?: boolean }
+  | { kind: 'parking'; day: Exclude<DayKey, 'pp'>; lot: string };
 export const productMeta: Record<string, ProductMeta> = {
   // '0c2019503cd666fb35c5a3dbd7bafe86': { day: 'za', zone: 'noord', audience: 'volw' },
+  // 'a1b2…': { kind: 'parking', day: 'za', lot: 'P5' },
 };
 
-/** Storefront → de Product-vorm die de schermen al gebruiken. Onbekende uid's worden overgeslagen. */
-export function toProducts(sf: ApiStorefront): Product[] {
-  const names = new Map(sf._embedded['shop:product'].map((p) => [p._links.self.href, p]));
-  const out: Product[] = [];
+/**
+ * Valt terug op de productnaam uit de backoffice als er geen vaste koppeling is.
+ * Werkt voor de huidige WCKT-namen ("Ireen Wüst bocht - Noord - kids - 31 okt", "Parkeerticket P5 - 31 okt",
+ * "Passe-Partout - Zitplaats West"). Controleer dit per toernooi.
+ */
+export function guessMeta(name: string): ProductMeta | null {
+  const n = name.toLowerCase();
+  const day: DayKey | null = /passe-?partout/.test(n) ? 'pp' : /30 okt/.test(n) ? 'vr' : /31 okt/.test(n) ? 'za' : /1 nov/.test(n) ? 'zo' : null;
+  if (!day) return null;
+  const park = n.match(/parkeer\w*\s*(p\d+)/);
+  if (park && day !== 'pp') return { kind: 'parking', day, lot: park[1].toUpperCase() };
+  const zone: Zone | null = /wüst|wust|noord/.test(n) ? 'noord' : /kramer|zuid/.test(n) ? 'zuid' : /vip/.test(n) ? 'vip' : /west/.test(n) ? 'west' : /oost/.test(n) ? 'oost' : /mindervalide/.test(n) ? 'mv' : null;
+  if (!zone) return null;
+  const audience: Audience = zone === 'mv' ? (/begeleider/.test(n) ? 'mv-beg' : 'mv-los') : /kids|kind/.test(n) ? 'kids' : 'volw';
+  return { day, zone, audience, limited: zone === 'vip' };
+}
+
+export type Catalog = { products: Product[]; parking: ParkingProduct[]; unmatched: string[] };
+
+/** Storefront → de vormen die de schermen al gebruiken. Producten zonder indeling komen in `unmatched`. */
+export function toCatalog(sf: ApiStorefront): Catalog {
+  const names = new Map(sf._embedded['shop:product'].map((p) => [p._links.self.href, p.name?.nl ?? p.name?.en ?? '']));
+  const out: Catalog = { products: [], parking: [], unmatched: [] };
   for (const cat of sf.categories) {
     for (const it of cat.items) {
       const uid = it.product.split('/').pop()!;
-      const meta = productMeta[uid];
-      if (!meta) { console.warn('Geen indeling voor product', uid, names.get(it.product)?.name?.nl); continue; }
+      const name = names.get(it.product) ?? uid;
+      const meta = productMeta[uid] ?? guessMeta(name);
+      if (!meta) { out.unmatched.push(name); continue; }
       const pb = it.price_breakdown;
-      out.push({
-        id: uid, ...meta,
-        price: num(pb.unit_price_including_service_costs),
-        fee: num(pb.unit_price_service_costs),
-        max: it.max_quantity,
-        soldOut: it.is_sold_out,
-      });
+      const price = num(pb.unit_price_including_service_costs);
+      if (meta.kind === 'parking') {
+        out.parking.push({ id: uid, day: meta.day, lot: meta.lot, price, soldOut: it.is_sold_out });
+      } else {
+        out.products.push({ id: uid, day: meta.day, zone: meta.zone, audience: meta.audience, limited: meta.limited, price, fee: num(pb.unit_price_service_costs), max: it.max_quantity, soldOut: it.is_sold_out });
+      }
     }
   }
   return out;
@@ -146,3 +168,28 @@ export const createOrder = (o: OrderInput) =>
 
 /* ---------- 4. na terugkomst: status controleren ---------- */
 export const getOrder = (uid: string) => call<ApiOrder>('GET', `/orders/${uid}`);
+
+/** Mislukte betaling opnieuw proberen: geeft een checkout_url van Paylogic terug. */
+export const retryPayment = (repaymentHref: string) =>
+  call<{ checkout_url: string }>('POST', repaymentHref.replace(API, ''));
+
+/* ---------- order-uid onthouden tussen vertrek naar en terugkomst van de betaalpagina ---------- */
+const KEY = 'paylogic_order';
+export const rememberOrder = (uid: string) => { try { sessionStorage.setItem(KEY, uid); } catch { /* privé-modus */ } };
+export const recallOrder = () => { try { return sessionStorage.getItem(KEY); } catch { return null; } };
+export const forgetOrder = () => { try { sessionStorage.removeItem(KEY); } catch { /* */ } };
+
+/** Nederlandse foutmelding voor de koper. */
+export function friendly(e: unknown): string {
+  if (!(e instanceof PaylogicError)) return 'De verbinding met de ticketverkoop is even weg. Controleer je internet en probeer het opnieuw.';
+  switch (e.type) {
+    case 'INSUFFICIENT_CONSECUTIVE_SEATS': return 'Er zijn niet genoeg plekken naast elkaar. Kies een ander aantal of een ander vak.';
+    case 'CAPTCHA_RATE_LIMIT_REACHED': case 'CAPTCHA_INVALID': return 'Het is druk in de shop. Wacht even en probeer het opnieuw.';
+    case 'CONSUMER_MISSING': return 'Er ontbreken gegevens. Controleer je naam, e-mailadres en adres.';
+    case 'PAYMENT_METHOD_MISSING': return 'Kies hoe je wilt betalen.';
+    case 'VOUCHER_INVALID': return 'Deze code is niet (meer) geldig.';
+    case 'EMPTY_BASKET': return 'Je mandje is leeg.';
+    case 'NO_TOKEN': return 'De shop is nog niet gekoppeld aan de ticketverkoop.';
+    default: return e.status >= 500 ? 'De ticketverkoop is tijdelijk niet bereikbaar. Probeer het zo opnieuw.' : `Er ging iets mis (${e.type}). Probeer het opnieuw.`;
+  }
+}

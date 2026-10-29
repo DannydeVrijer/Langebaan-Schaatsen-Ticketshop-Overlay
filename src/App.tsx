@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { DESKTOP_W, useWide } from './components/ui';
 import { ShopProvider } from './state';
+import { CatalogProvider } from './catalog';
 import Day from './screens/Day';
 import Parking from './screens/Parking';
 import Cart from './screens/Cart';
@@ -43,6 +44,7 @@ function Frame({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <HashRouter>
+      <CatalogProvider>
       <ShopProvider>
         <ScrollTop />
         <Frame>
@@ -58,6 +60,7 @@ export default function App() {
           </Routes>
         </Frame>
       </ShopProvider>
+      </CatalogProvider>
     </HashRouter>
   );
 }

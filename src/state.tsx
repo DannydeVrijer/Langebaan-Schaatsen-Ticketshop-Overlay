@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { parking, products, RESERVATION_MIN, type ParkingProduct, type Product } from './data/event';
+import { RESERVATION_MIN, type ParkingProduct, type Product } from './data/event';
+import { useCatalog } from './catalog';
 
 export type Line =
   | { kind: 'ticket'; item: Product; qty: number }
   | { kind: 'parking'; item: ParkingProduct; qty: number };
 
-export type Order = { id: string; lines: Line[]; total: number; fees: number; email: string; firstName: string; protection: boolean; method: string };
+export type Order = { id: string; lines: Line[]; total: number; fees: number; email: string; firstName: string; protection: boolean; method: string; paymentUrl?: string };
 
 type Ctx = {
   qty: Record<string, number>;
@@ -33,9 +34,10 @@ type Ctx = {
 
 const C = createContext<Ctx | null>(null);
 const round = (n: number) => Math.round(n * 100) / 100;
-const byId = new Map<string, Product | ParkingProduct>([...products, ...parking].map((p) => [p.id, p]));
 
 export function ShopProvider({ children }: { children: ReactNode }) {
+  const { products, parking, live } = useCatalog();
+  const byId = useMemo(() => new Map<string, Product | ParkingProduct>([...products, ...parking].map((p) => [p.id, p])), [products, parking]);
   const [qty, setQtyMap] = useState<Record<string, number>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -46,13 +48,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const empty = Object.keys(qty).length === 0;
 
-  // Echte reservering: start bij het eerste item, stopt als het mandje leeg is. Reset nooit vanzelf.
+  // Demo-reservering (alleen voorbeeldmodus): start bij het eerste item, stopt als het mandje leeg is.
+  // Live reserveert Paylogic pas bij het aanmaken van de order; dan loopt hier geen timer.
   useEffect(() => {
-    if (empty) { setStartedAt(null); return; }
+    if (empty || live) { setStartedAt(null); return; }
     const t = Date.now();
     setStartedAt((s) => s ?? t);
     setNow(t);
-  }, [empty]);
+  }, [empty, live]);
 
   useEffect(() => {
     if (!startedAt) return;
@@ -89,7 +92,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       clear: () => setQtyMap({}),
       order, setOrder, demo, setDemo, view, setView,
     };
-  }, [qty, setQty, remaining, expired, order, demo, view]);
+  }, [qty, setQty, remaining, expired, order, demo, view, byId]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }

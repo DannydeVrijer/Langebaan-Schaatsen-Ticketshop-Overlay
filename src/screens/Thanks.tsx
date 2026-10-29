@@ -4,6 +4,8 @@ import { audienceLabel, days, dayOf, euro, event, zoneInfo } from '../data/event
 import { Chevrons, Icon, ProtoFooter, ShopBar, TrackRing } from '../components/ui';
 import { Price } from '../components/Price';
 import { useShop } from '../state';
+import { useCatalog } from '../catalog';
+import { forgetOrder, friendly, getOrder, recallOrder, retryPayment, type ApiOrder } from '../api/paylogic';
 
 const APP_URL = 'https://dannydevrijer.github.io/Langebaan-Schaats-App/';
 
@@ -22,6 +24,86 @@ function Confetti() {
 }
 
 export default function Thanks() {
+  const { live } = useCatalog();
+  if (live) return <LiveThanks />;
+  return <MockThanks />;
+}
+
+/**
+ * Live: de koper komt terug van de betaalpagina van Paylogic. De pagina is dan opnieuw geladen,
+ * dus het mandje is weg; we halen de order op met de uid die we vóór het vertrek bewaarden.
+ */
+function LiveThanks() {
+  const { clear } = useShop();
+  const [uid] = useState(() => recallOrder());
+  const [o, setO] = useState<ApiOrder | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!uid) return;
+    let alive = true;
+    getOrder(uid).then((x) => { if (alive) { setO(x); if (x.status === 'completed') { clear(); forgetOrder(); } } }).catch((e) => alive && setErr(friendly(e)));
+    return () => { alive = false; };
+  }, [uid, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const retry = async () => {
+    if (!o?._links['shop:repayment']) return;
+    setBusy(true);
+    try { const r = await retryPayment(o._links['shop:repayment'].href); window.location.assign(r.checkout_url); }
+    catch (e) { setErr(friendly(e)); setBusy(false); }
+  };
+
+  if (!uid) return <Navigate to="/" replace />;
+  if (err) return <main className="screen"><ShopBar /><section className="empty"><Icon name="info" size={40} /><h1 className="display">Even geen verbinding</h1><p className="muted">{err}</p><button type="button" className="btn btn-primary" onClick={() => { setErr(null); setTick((t) => t + 1); }}>Opnieuw proberen</button></section></main>;
+  if (!o) return <main className="screen"><ShopBar /><section className="empty"><div className="skeleton" style={{ width: '100%', height: 120 }} /><p className="muted">Je betaling controleren…</p></section></main>;
+
+  if (o.status !== 'completed') {
+    const canRetry = Boolean(o._links['shop:repayment']);
+    return (
+      <main className="screen">
+        <ShopBar />
+        <section className="empty">
+          <Icon name="clock" size={40} />
+          <h1 className="display">{o.status === 'canceled' ? 'Betaling niet gelukt' : 'Betaling nog niet bevestigd'}</h1>
+          <p className="muted">{o.status === 'canceled' ? 'Je bestelling is geannuleerd. Er is niets afgeschreven.' : 'Soms duurt de bevestiging van de bank even. Vernieuw zo meteen, of probeer opnieuw te betalen.'}</p>
+          {canRetry && <button type="button" className="btn btn-primary" disabled={busy} onClick={retry}>{busy ? 'Even geduld…' : 'Opnieuw betalen'}</button>}
+          {o.status === 'pending' && <button type="button" className="link-btn center" onClick={() => setTick((t) => t + 1)}>Status vernieuwen</button>}
+          <Link to="/" className="link-btn center" onClick={forgetOrder}>Opnieuw beginnen</Link>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="screen">
+      <Confetti />
+      <ShopBar whyKey="thanks" />
+      <section className="done-hero">
+        <TrackRing className="ring" />
+        <Chevrons className="chev" />
+        <span className="eyebrow">Bestelling {o.reference ?? o.uid}</span>
+        <h1 className="display">Je bent erbij!</h1>
+        <p>Je e-tickets staan in je mail. Toon ze op je telefoon bij de ingang.</p>
+      </section>
+      <section className="totals-card">
+        <div className="grand"><span>Betaald</span><span><Price v={Number(o.grand_total.amount)} /></span></div>
+      </section>
+      <section className="section">
+        <h2 className="display h-sm">Wat nu?</h2>
+        <div className="next-list">
+          {o._links['shop:etickets'] && <a href={o._links['shop:etickets'].href} target="_blank" rel="noreferrer" className="next"><Icon name="ticket" /><span><b>Download je e-tickets</b><small>Ook per mail verstuurd.</small></span></a>}
+          <a href={APP_URL} target="_blank" rel="noreferrer" className="next"><Icon name="pin" /><span><b>Open de schaatsapp</b><small>Programma, favoriete schaatsers en route op de dag zelf.</small></span></a>
+        </div>
+        <p className="note"><Icon name="info" size={15} /> {event.doorsNote}</p>
+      </section>
+      <Link to="/" className="btn btn-secondary" style={{ marginTop: 8 }}>Terug naar het begin</Link>
+    </main>
+  );
+}
+
+function MockThanks() {
   const { order: o, setQty } = useShop();
   const [offer, setOffer] = useState<'open' | 'nee' | 'ja'>('open');
   const [copied, setCopied] = useState(false);

@@ -1,6 +1,9 @@
 import { Price } from '../components/Price';
 import { Link, useNavigate } from 'react-router-dom';
-import { audienceLabel, dayLabel, dayOf, euro, faq, ppCompare, usps, zoneInfo, type DayKey } from '../data/event';
+import { useEffect, useState } from 'react';
+import { audienceLabel, dayLabel, dayOf, euro, faq, usps, zoneInfo, type DayKey } from '../data/event';
+import { useCatalog } from '../catalog';
+import { friendly, getBill } from '../api/paylogic';
 import { ActionBar, Icon, ShopBar, StepBar, Stepper } from '../components/ui';
 import { mmss, useShop, type Line } from '../state';
 
@@ -9,6 +12,21 @@ const order: DayKey[] = ['vr', 'za', 'zo', 'pp'];
 export default function Cart() {
   const shop = useShop();
   const nav = useNavigate();
+  const { ppCompare, live } = useCatalog();
+  // Live: Paylogic rekent het definitieve totaal (bill). Verschil met onze som → Paylogic is leidend.
+  const [bill, setBill] = useState<{ total: number; fees: number } | null>(null);
+  const [billErr, setBillErr] = useState<string | null>(null);
+  const key = shop.lines.map((l) => `${l.item.id}:${l.qty}`).join(',');
+  useEffect(() => {
+    if (!live || !shop.lines.length) { setBill(null); return; }
+    let alive = true;
+    getBill(shop.lines.map((l) => ({ id: l.item.id, qty: l.qty })))
+      .then((b) => alive && (setBill({ total: Number((b.grand_total ?? b.total).amount), fees: Number(b.service_costs.total.amount) }), setBillErr(null)))
+      .catch((e) => alive && setBillErr(friendly(e)));
+    return () => { alive = false; };
+  }, [key, live]); // eslint-disable-line react-hooks/exhaustive-deps
+  const total = bill?.total ?? shop.total;
+  const fees = bill?.fees ?? shop.fees;
 
   if (shop.expired) {
     return (
@@ -55,7 +73,7 @@ export default function Cart() {
         <h1 className="display">Je mandje</h1>
       </header>
 
-      {shop.remaining !== null && (
+      {shop.remaining !== null && !live && (
         <p className={`hold ${low ? 'low' : ''}`} role="timer" aria-live="off">
           <Icon name="clock" size={18} />
           <span>We houden je plekken nog <b>{mmss(shop.remaining)}</b> voor je vast, zodat niemand anders ze intussen pakt.</span>
@@ -84,11 +102,11 @@ export default function Cart() {
       ))}
 
       <section className="totals-card">
-        <div><span>{shop.lines.some((l) => l.kind === 'parking') ? 'Tickets en parkeren' : 'Tickets'}</span><span><Price v={shop.total} /></span></div>
-        <div className="sub"><span>Waarvan servicekosten</span><span><Price v={shop.fees} /></span></div>
-        <div className="grand"><span>Totaal</span><span><Price v={shop.total} /></span></div>
+        <div><span>{shop.lines.some((l) => l.kind === 'parking') ? 'Tickets en parkeren' : 'Tickets'}</span><span><Price v={total} /></span></div>
+        <div className="sub"><span>Waarvan servicekosten</span><span><Price v={fees} /></span></div>
+        <div className="grand"><span>Totaal</span><span><Price v={total} /></span></div>
         {saved > 0 && <div className="saved"><span>Je bespaart met je passe-partout</span><span><Price v={saved} /></span></div>}
-        <p className="no-extra">Geen extra kosten bij het betalen.</p>
+        <p className="no-extra">{billErr ? billErr : live && !bill ? 'Totaal wordt gecontroleerd…' : 'Geen extra kosten bij het betalen.'}</p>
       </section>
 
       <ul className="usp-quiet" aria-label="Zekerheden">
@@ -100,7 +118,7 @@ export default function Cart() {
         {faq.slice(0, 3).map((f) => <details key={f.q} className="faq"><summary>{f.q}</summary><p>{f.a}</p></details>)}
       </section>
 
-      <ActionBar note={<><b>Totaal {euro(shop.total)}</b> · {shop.count} {shop.count === 1 ? 'item' : 'items'}</>}>
+      <ActionBar note={<><b>Totaal {euro(total)}</b> · {shop.count} {shop.count === 1 ? 'item' : 'items'}</>}>
         <button type="button" className="btn btn-primary" onClick={() => nav('/gegevens')}>Verder naar bestellen <Icon name="chev" /></button>
       </ActionBar>
     </main>

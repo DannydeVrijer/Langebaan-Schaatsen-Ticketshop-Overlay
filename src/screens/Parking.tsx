@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { days, euro, parking } from '../data/event';
+import { days, euro } from '../data/event';
+import { useCatalog } from '../catalog';
 import { ActionBar, Icon, ShopBar, StepBar, Stepper } from '../components/ui';
 import { useShop } from '../state';
 
@@ -8,6 +9,7 @@ export default function Parking() {
   const shop = useShop();
   const nav = useNavigate();
   const [showAll, setShowAll] = useState(false);
+  const { parking } = useCatalog();
 
   if (!shop.ticketCount) return <Navigate to="/" replace />;
 

@@ -47,19 +47,38 @@ VITE_PAYLOGIC_API=https://shopping-api.sandbox.paylogic.com   # alleen tijdens t
 
 Lokaal in `.env.local`; op GitHub Pages als repository-secrets in de workflow (`env:` bij de build-stap). Zonder deze variabelen draait de shop op de voorbeelddata.
 
-## Stap 4 – De schermen aansluiten
+## Stap 4 – De schermen zijn aangesloten ✅
 
-Per scherm één wijziging:
+Gedaan (29 okt 2026). De shop schakelt automatisch:
 
-| Scherm | Nu | Straks |
+| Scherm | Zonder token (voorbeeld) | Met token (live) |
 |---|---|---|
-| `Day.tsx` | `products` uit `data/event.ts` | bij laden `getStorefront()` → `toProducts()`; laadstatus en foutmelding tonen; respecteer `min_per_order`/`max_per_order` |
-| `Cart.tsx` | zelf rekenen | daarnaast `getBill()`; toon `grand_total` van Paylogic (leidend) |
-| `Checkout.tsx` | vaste betaalmethodes | `available_payment_methods` uit de bill; verplichte velden per methode uit `required_consumer_fields` (PayPal vraagt bijv. geboortedatum en adres) |
-| `Pay.tsx` | simulatie | `createOrder()` → `window.location = order._links.payment.href` |
-| `Thanks.tsx` | uit lokaal geheugen | lees order-uid uit de redirect-URL → `getOrder()`; bij `pending`/`canceled` terug naar gegevens met `shop:repayment` als dat kan |
+| Dagkeuze / tickets | vaste data | `getStorefront()` → producten, uitverkocht, max per order; laad- en foutscherm met link naar de standaard shop |
+| Parkeren | vaste data | parkeerproducten uit dezelfde storefront |
+| Mandje | eigen som + demo-timer | `getBill()`; totaal van Paylogic is leidend; geen timer (Paylogic reserveert pas bij de order) |
+| Gegevens | alle velden, 4 vaste betaalmethodes, XCover | betaalmethodes en verplichte velden uit de bill (iDEAL: alleen naam, e-mail, land); XCover verborgen (niet in de API); bij "Betaal": `createOrder()` → door naar de betaalpagina van Paylogic |
+| Betalen | simulatiescherm | overgeslagen: koper zit op de Paylogic-betaalpagina |
+| Bedankt | uit geheugen | order-uid onthouden vóór vertrek → `getOrder()`: `completed` → bedankpagina met e-ticketlink; `pending` → "status vernieuwen"; `canceled` → "Opnieuw betalen" via `shop:repayment` |
 
-De 20-minutentimer: Paylogic bevestigt de reservering pas bij `POST /orders`. Tot die tijd is er geen echte reservering. Maak de timer daarom pas zichtbaar ná het aanmaken van de order (of laat hem weg in de mandjesstap).
+Foutmeldingen in gewone taal voor: geen verbinding, uitverkocht, captcha/drukte, ontbrekende gegevens, niet genoeg plekken naast elkaar.
+
+Producten worden gekoppeld via `productMeta` (vaste tabel) óf automatisch uit de productnaam (`guessMeta`: herkent "Ireen Wüst bocht", "kids", "31 okt", "Parkeerticket P5", "Passe-Partout"). Producten die niet herkend worden staan in de console als waarschuwing.
+
+**Nog te doen voor de echte verkoop**
+- Captcha-widget inbouwen (Paylogic geeft `captcha.provider` + `public_key` in de storefront; het token moet mee in `createOrder`).
+- Postcode-opzoeken: live vraagt de shop straat en plaats gewoon zelf (de bol.com-simulatie staat uit).
+- Opt-ins: Paylogic kent één `opt_in`-vinkje; de WhatsApp- en HoS-vinkjes moeten naar jullie eigen CRM.
+- Annuleringsbescherming (XCover) zit niet in de Shopping API; vraag Paylogic of dit via de API kan.
+- Tracking (GA4/Meta) op `status: completed`.
+
+### Lokaal testen zonder Paylogic
+
+```
+node server/mock-paylogic.mjs                                    # nep-Paylogic op :8788
+VITE_PAYLOGIC_API=http://localhost:8788 VITE_PAYLOGIC_TOKEN=test VITE_PAYLOGIC_EVENT=test npm run dev
+```
+
+De nep-server heeft de WCKT-producten, een nep-betaalpagina (gelukt/annuleren) en simuleert de captcha-fout als de voornaam "Druk" is.
 
 ## Stap 5 – Testen in de sandbox
 

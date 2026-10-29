@@ -9,6 +9,7 @@ export default function Pay() {
   const nav = useNavigate();
   const o = shop.order;
   if (!o) return <Navigate to="/" replace />;
+  if (o.paymentUrl) { window.location.assign(o.paymentUrl); return null; }
 
   return (
     <main className="screen">

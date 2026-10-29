@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { why } from '../data/why';
+import { useCatalog } from '../catalog';
 import { mmss, useShop } from '../state';
 
 const I = {
@@ -64,7 +65,9 @@ export const Chevrons = ({ className }: { className?: string }) => (
 
 /** Kop van elke shoppagina: terug, eventnaam, winkelmand met teller en reserveringstijd. */
 export function ShopBar({ back, title = 'WCKT 2026', whyKey }: { back?: string | number; title?: string; whyKey?: string }) {
-  const { count, remaining } = useShop();
+  const { count, remaining: rem } = useShop();
+  const { live } = useCatalog();
+  const remaining = live ? null : rem;
   const nav = useNavigate();
   const low = remaining !== null && remaining < 5 * 60_000;
   return (

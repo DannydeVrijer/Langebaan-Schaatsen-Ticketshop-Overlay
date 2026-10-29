@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { audienceLabel, dayOf, days, euro, event, faq, groups, kidsRules, parking, ppCompare, products, quotes, usps, vipStack, zoneInfo, type DayKey, type Product, type Zone } from '../data/event';
+import { audienceLabel, dayOf, days, euro, event, faq, groups, kidsRules, quotes, usps, vipStack, zoneInfo, type DayKey, type Product, type Zone } from '../data/event';
+import { useCatalog } from '../catalog';
 import { ThialfMap } from '../components/ThialfMap';
 import { ActionBar, Icon, ProtoFooter, Sheet, ShopBar, Stepper } from '../components/ui';
 import { Price } from '../components/Price';
 import { useShop } from '../state';
 import { asset } from '../asset';
 
-const minAdult = (k: DayKey) => Math.min(...products.filter((p) => p.day === k && !p.soldOut && p.audience === 'volw').map((p) => p.price));
 const minOf = (ps: Product[]) => { const a = ps.filter((p) => !p.soldOut); const v = a.filter((p) => p.audience !== 'kids'); return Math.min(...(v.length ? v : a).map((p) => p.price)); };
 
 const segs: { key: DayKey; top: string; sub: string }[] = [
@@ -19,13 +19,14 @@ export default function Day() {
   const { day } = useParams();
   const nav = useNavigate();
   const shop = useShop();
+  const { products, parking, minAdult, ppCompare, status, error, reload, maxPerOrder } = useCatalog();
   const [open, setOpen] = useState<Zone | null>(null);
   const [info, setInfo] = useState<Zone | null>(null);
   const [sheet, setSheet] = useState<'prog' | 'map' | 'faq' | null>(null);
   const [added, setAdded] = useState<Product | null>(null);
   const refs = useRef<Partial<Record<Zone, HTMLElement | null>>>({});
 
-  const ofDay = useMemo(() => products.filter((p) => p.day === day), [day]);
+  const ofDay = useMemo(() => products.filter((p) => p.day === day), [day, products]);
   const zones = [...new Set(ofDay.map((p) => p.zone))];
   const available = Object.fromEntries(zones.map((z) => [z, ofDay.some((p) => p.zone === z && !p.soldOut)])) as Partial<Record<Zone, boolean>>;
 
@@ -44,6 +45,7 @@ export default function Day() {
   }, [shop.lines, shop.qty, day]);
 
   if (!day) return <DayPicker />;
+  if (status === 'loading' || status === 'error') return <CatalogState status={status} error={error} reload={reload} />;
   if (!segs.some((t) => t.key === day)) return <Navigate to="/" replace />;
   const d = day === 'pp' ? null : dayOf(day as DayKey)!;
 
@@ -92,7 +94,7 @@ export default function Day() {
           const n = shop.lines.filter((l) => l.kind === 'ticket' && l.item.day === t.key).reduce((s, l) => s + l.qty, 0);
           return (
             <Link key={t.key} to={`/tickets/${t.key}`} replace role="tab" aria-selected={t.key === day} className={t.key === day ? 'on' : ''} onClick={() => setOpen(null)}>
-              <b>{t.top}</b><span>{t.sub}</span><small>{euro(minAdult(t.key))}</small>
+              <b>{t.top}</b><span>{t.sub}</span><small>{minAdult(t.key) != null ? euro(minAdult(t.key)!) : 'uitverkocht'}</small>
               {n > 0 && <i className="dot-n" aria-label={`${n} gekozen`}>{n}</i>}
             </Link>
           );
@@ -143,7 +145,7 @@ export default function Day() {
                               <b>{cmp && <s className="was">{euro(cmp.los)}</s>} <Price v={p.price} /></b>
                             </span>
                             {p.soldOut ? <span className="sold-lbl">Uitverkocht</span>
-                              : <Stepper value={shop.qty[p.id] ?? 0} max={p.max} onChange={(n) => change(p, n)} label={`${zi.title}, ${audienceLabel[p.audience]}`} />}
+                              : <Stepper value={shop.qty[p.id] ?? 0} max={Math.min(p.max, maxPerOrder)} onChange={(n) => change(p, n)} label={`${zi.title}, ${audienceLabel[p.audience]}`} />}
                           </div>
                         );
                       })}
@@ -281,7 +283,9 @@ export default function Day() {
 function DayPicker() {
   const shop = useShop();
   const nav = useNavigate();
+  const { minAdult, ppCompare, status, error, reload } = useCatalog();
   const [prog, setProg] = useState(false);
+  if (status === 'loading' || status === 'error') return <CatalogState status={status} error={error} reload={reload} />;
   const ppSave = ppCompare('noord', 'volw');
   const count = (k: DayKey) => shop.lines.filter((l) => l.kind === 'ticket' && l.item.day === k).reduce((s, l) => s + l.qty, 0);
   return (
@@ -305,7 +309,7 @@ function DayPicker() {
           <Link key={x.key} to={`/tickets/${x.key}`} className="pick">
             <span className="pick-date"><b>{x.date.split(' ')[0]}</b><i>{x.date.split(' ')[1]}</i></span>
             <span className="pick-txt"><b>{x.name}</b><small>{x.time} · {x.races.length} afstanden</small></span>
-            <span className="zrow-price"><small>vanaf</small><Price v={minAdult(x.key)} /></span>
+            <span className="zrow-price">{minAdult(x.key) != null ? <><small>vanaf</small><Price v={minAdult(x.key)!} /></> : <small>uitverkocht</small>}</span>
             {count(x.key) > 0 && <i className="dot-n">{count(x.key)}</i>}
             <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
           </Link>
@@ -313,7 +317,7 @@ function DayPicker() {
         <Link to="/tickets/pp" className="pick pp">
           <span className="pick-date pp"><b>3</b><i>dagen</i></span>
           <span className="pick-txt"><b>Alle 3 dagen</b><small>Passe-partout{ppSave ? ` · bespaar tot ${euro(ppSave.save)}` : ''}</small></span>
-          <span className="zrow-price"><small>vanaf</small><Price v={minAdult('pp')} /></span>
+          <span className="zrow-price">{minAdult('pp') != null ? <><small>vanaf</small><Price v={minAdult('pp')!} /></> : <small>uitverkocht</small>}</span>
           {count('pp') > 0 && <i className="dot-n">{count('pp')}</i>}
           <span className="chev" aria-hidden><Icon name="chev" size={18} /></span>
         </Link>
@@ -345,6 +349,31 @@ function DayPicker() {
           <p className="small muted">{event.doorsNote}</p>
         </Sheet>
       )}
+    </main>
+  );
+}
+
+/** Laad- en foutweergave voor de live catalogus. */
+function CatalogState({ status, error, reload }: { status: 'loading' | 'error'; error: string | null; reload: () => void }) {
+  return (
+    <main className="screen">
+      <ShopBar />
+      <section className="empty">
+        {status === 'loading' ? (
+          <>
+            <div className="skeleton" style={{ width: '100%', height: 120 }} />
+            <p className="muted">Tickets en prijzen ophalen…</p>
+          </>
+        ) : (
+          <>
+            <Icon name="info" size={40} />
+            <h1 className="display">Even geen verbinding</h1>
+            <p className="muted">{error}</p>
+            <button type="button" className="btn btn-primary" onClick={reload}>Opnieuw proberen</button>
+            <a className="link-btn center" href="https://tickets.schaatsen.nl/7ea4c49ff00f41d3acc549e0fdab376f/tickets" target="_blank" rel="noreferrer">Of koop via de standaard ticketshop</a>
+          </>
+        )}
+      </section>
     </main>
   );
 }
