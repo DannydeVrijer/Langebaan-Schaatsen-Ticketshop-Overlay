@@ -59,7 +59,8 @@ export type ApiOrder = {
 };
 
 export class PaylogicError extends Error {
-  constructor(public status: number, public type: string, message: string, public logref?: string) { super(message); }
+  status: number; type: string; logref?: string;
+  constructor(status: number, type: string, message: string, logref?: string) { super(message); this.status = status; this.type = type; this.logref = logref; }
 }
 
 async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
