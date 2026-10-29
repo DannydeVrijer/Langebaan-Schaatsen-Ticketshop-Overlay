@@ -113,6 +113,8 @@ function MockThanks() {
   const hasPark = o.lines.some((l) => l.kind === 'parking');
   const visitDays = new Set(tickets.flatMap((l) => (l.item.day === 'pp' ? ['vr', 'za', 'zo'] : [l.item.day])));
   const firstDay = days.find((d) => visitDays.has(d.key));
+  // Bewegwijzering in Thialf gebruikt dezelfde namen als de shop (Ireen Wüst bocht, Tribune West, …)
+  const wayfind = [...new Set(tickets.map((l) => zoneInfo[l.item.zone].title))].join('" en "');
 
   // Eén vervolgaanbod: parkeren als dat ontbreekt
   const upsell = !hasPark && firstDay ? { t: `Toch met de auto naar Thialf op ${firstDay.name.toLowerCase()}?`, s: 'Een parkeerticket kost 10,-. Je kunt hem nu nog toevoegen.' } : null;
@@ -166,7 +168,14 @@ function MockThanks() {
           <button type="button" className="next" onClick={share}><Icon name="share" /><span><b>{copied ? 'Bericht gekopieerd' : 'Ga je met vrienden?'}</b><small>{copied ? 'Plak het in je groepsapp.' : 'Kopieer een berichtje voor je groepsapp.'}</small></span></button>
           <a href={APP_URL} target="_blank" rel="noreferrer" className="next"><Icon name="pin" /><span><b>Open de schaatsapp</b><small>Programma, favoriete schaatsers en route op de dag zelf.</small></span></a>
         </div>
-        <p className="note"><Icon name="info" size={15} /> {event.doorsNote}</p>
+        <p className="note"><Icon name="info" size={15} /> {event.doorsNote}{wayfind ? ` In Thialf volg je de borden "${wayfind}".` : ''}</p>
+      </section>
+
+      <section className="again">
+        <TrackRing className="ring" />
+        <span className="display again-t">Tot ziens!</span>
+        <p><b>Zien we jou bij het volgende toernooi?</b> Alle schaatstoernooien in Thialf en de ticketverkoop staan op schaatsen.nl/tickets.</p>
+        <a href="https://schaatsen.nl/tickets" target="_blank" rel="noreferrer" className="btn btn-secondary sm">Bekijk de schaatskalender</a>
       </section>
 
       <ProtoFooter text="Fictief voorbeeld. Er is niets besteld of betaald." />

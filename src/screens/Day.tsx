@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { audienceLabel, dayOf, days, euro, event, faq, groups, kidsRules, quotes, usps, vipStack, zoneInfo, type DayKey, type Product, type Zone } from '../data/event';
 import { useCatalog } from '../catalog';
 import { ThialfMap } from '../components/ThialfMap';
-import { ActionBar, Icon, ProtoFooter, Sheet, ShopBar, Stepper } from '../components/ui';
+import { ActionBar, Icon, ProtoFooter, Sheet, ShopBar, Stepper, TrackRing } from '../components/ui';
 import { Price } from '../components/Price';
 import { useShop } from '../state';
 import { asset } from '../asset';
@@ -296,7 +296,9 @@ function DayPicker() {
           <source media="(min-width: 900px)" srcSet={asset('img/hero-wide.jpg')} />
           <img src={asset('img/hero.jpg')} alt="Langebaanschaatser in actie" />
         </picture>
+        <TrackRing className="ph-ring" />
         <div className="ph-body">
+          <span className="ph-tag display" aria-hidden>Beleef de magie <i>van schaatsen</i></span>
           <span className="eyebrow">{event.dates} · Thialf, Heerenveen</span>
           <h1 className="display">{event.name}</h1>
           <p>{event.stakes}</p>

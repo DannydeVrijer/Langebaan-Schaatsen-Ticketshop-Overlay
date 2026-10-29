@@ -10,6 +10,7 @@ export const why: Record<string, { title: string; items: Why[] }> = {
   day: {
     title: 'Tickets kiezen (startpagina)',
     items: [
+      { t: 'Startbeeld in de stijl van de aankleding van Thialf', s: 'Blauwe duotoon-foto in de witte baanring en de regel "Beleef de magie van schaatsen": hetzelfde beeld als de abri\'s, entreedoeken en trussen in Thialf. Wie de shop ziet, herkent later het stadion, en andersom.', bron: 'Aankleding Thialf (TEN Content Agency, Frame.io) · INF – consistentie' },
       { t: 'Stap 1: eerst je dag kiezen', s: 'Zoals in de huidige shop begin je met de dag. Geen dag voorgeselecteerd: elke dag als duidelijke keuze met tijden en vanaf-prijs. Daarna pas de plekken.', bron: 'INF – kleine eerste stap · OI – keuzehulp' },
       { t: 'Direct tickets, geen programma voorop', s: 'Zoals een productpagina bij bol.com: je ziet meteen wat je kunt kopen en wat het kost. Programma, plattegrond en vragen staan achter een knop.', bron: 'bol.com – product en prijs eerst · DCS – één doel per pagina' },
       { t: 'Rust: één keer zeggen, niet overal', s: '"Inclusief servicekosten" en "kinderen t/m 5 gratis" staan één keer bovenaan in plaats van bij elke regel. Zekerheden (e-ticket, veilig betalen) staan rustig onder de lijst en in het mandje.', bron: 'bol.com – belofte herhalen · OI – afleiding verwijderen' },
@@ -58,6 +59,8 @@ export const why: Record<string, { title: string; items: Why[] }> = {
     items: [
       { t: 'Confettiregen', s: 'Beloon de aankoop zichtbaar: "Je bent erbij!"', bron: 'OI – confettiregen' },
       { t: 'Eén vervolgaanbod, met even zichtbare "nee"', s: 'Parkeren of passe-partout ná de aankoop, nooit ervoor.', bron: 'DCS – upsell na aankoop' },
+      { t: 'Bewegwijzering met dezelfde namen', s: 'De borden in Thialf zeggen "Ireen Wüst bocht", "Tribune West": precies wat op je ticket en in de shop staat. De bedankpagina zegt welk bord je volgt.', bron: 'Aankleding Thialf – abri bewegwijzering · OI – verwachte inspanning verlagen' },
+      { t: '"Zien we jou bij het volgende toernooi?"', s: 'Dezelfde vraag als op de QR-abri bij de uitgang, nu op de bedankpagina met link naar de schaatskalender. Tot ziens!', bron: 'Aankleding Thialf – QR-abri · DCS – volgende stap in de value ladder' },
       { t: 'Delen met vrienden', s: 'Van koper naar ambassadeur: "Ga je met vrienden? Stuur ze de link."', bron: 'TOR – community · INF – unity' },
     ],
   },
